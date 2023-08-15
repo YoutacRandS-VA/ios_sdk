@@ -91,6 +91,14 @@ static const char * const kInternalQueueName = "com.adjust.SdkClickQueue";
                      }];
 }
 
+- (void)updatePackagesWithIdfaAndAttStatus {
+    [ADJUtil launchInQueue:self.internalQueue
+                selfInject:self
+                     block:^(ADJSdkClickHandler *selfI) {
+        [selfI updatePackagesWithIdfaAndAttStatusI:selfI];
+    }];
+}
+
 - (void)teardown {
     [ADJAdjustFactory.logger verbose:@"ADJSdkClickHandler teardown"];
 
@@ -185,6 +193,20 @@ activityHandler:(id<ADJActivityHandler>)activityHandler
     [self.logger verbose:@"Waiting for %@ seconds before retrying sdk_click for the %d time", waitTimeFormatted, selfI.lastPackageRetriesCount];
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(waitTime * NSEC_PER_SEC)), self.internalQueue, work);
 }
+
+- (void)updatePackagesWithIdfaAndAttStatusI:(ADJSdkClickHandler *)selfI {
+
+    int attStatus = [ADJUtil attStatus];
+    for (ADJActivityPackage *activityPackage in selfI.packageQueue) {
+        [ADJPackageBuilder parameters:activityPackage.parameters
+                               setInt:attStatus
+                               forKey:@"att_status"];
+        [ADJPackageBuilder addIdfaToParameters:activityPackage.parameters
+                                    withConfig:self.activityHandler.adjustConfig
+                                        logger:[ADJAdjustFactory logger]];
+    }
+}
+
 
 - (void)responseCallback:(ADJResponseData *)responseData {
     if (responseData.jsonResponse) {

@@ -1221,27 +1221,9 @@ NSString * const ADJAttributionTokenParameter = @"attribution_token";
 }
 
 - (void)addIdfaIfPossibleToParameters:(NSMutableDictionary *)parameters {
-    id<ADJLogger> logger = [ADJAdjustFactory logger];
-
-    if (! self.adjustConfig.allowIdfaReading) {
-        return;
-    }
-    
-    if (self.adjustConfig.coppaCompliantEnabled) {
-        [logger info:@"Cannot read IDFA with COPPA enabled"];
-        return;
-    }
-    
-    NSString *idfa = [ADJUtil idfa];
-
-    if (idfa == nil
-        || idfa.length == 0
-        || [idfa isEqualToString:@"00000000-0000-0000-0000-000000000000"])
-    {
-        return;
-    }
-
-    [ADJPackageBuilder parameters:parameters setString:idfa forKey:@"idfa"];
+    [ADJPackageBuilder addIdfaToParameters:parameters
+                                withConfig:self.adjustConfig
+                                    logger:[ADJAdjustFactory logger]];
 }
 
 - (void)addIdfvIfPossibleToParameters:(NSMutableDictionary *)parameters {
@@ -1373,6 +1355,30 @@ NSString * const ADJAttributionTokenParameter = @"attribution_token";
 + (BOOL)isAdServicesPackage:(ADJActivityPackage *)activityPackage {
     NSString *source = activityPackage.parameters[@"source"];
     return ([ADJUtil isNotNull:source] && [source isEqualToString:ADJAdServicesPackageKey]);
+}
+
++ (void)addIdfaToParameters:(NSMutableDictionary * _Nullable)parameters
+                 withConfig:(ADJConfig * _Nullable)adjConfig
+                     logger:(id<ADJLogger> _Nullable)logger {
+
+    if (! adjConfig.allowIdfaReading) {
+        return;
+    }
+
+    if (adjConfig.coppaCompliantEnabled) {
+        [logger info:@"Cannot read IDFA with COPPA enabled"];
+        return;
+    }
+
+    NSString *idfa = [ADJUtil idfa];
+    if (idfa == nil
+        || idfa.length == 0
+        || [idfa isEqualToString:@"00000000-0000-0000-0000-000000000000"])
+    {
+        return;
+    }
+
+    [ADJPackageBuilder parameters:parameters setString:idfa forKey:@"idfa"];
 }
 
 @end
