@@ -23,6 +23,7 @@
 #import "ADJUserDefaults.h"
 #import "ADJUrlStrategy.h"
 #import "ADJSKAdNetwork.h"
+#import "ADJPurchaseVerificationHandler.h"
 
 NSString * const ADJAdServicesPackageKey = @"apple_ads";
 
@@ -85,6 +86,7 @@ const NSUInteger kWaitingForAttStatusLimitSeconds = 120;
 @property (nonatomic, strong) ADJPackageHandler *packageHandler;
 @property (nonatomic, strong) ADJAttributionHandler *attributionHandler;
 @property (nonatomic, strong) ADJSdkClickHandler *sdkClickHandler;
+@property (nonatomic, strong) ADJPurchaseVerificationHandler *purchaseVerificationHandler;
 @property (nonatomic, strong) ADJActivityState *activityState;
 @property (nonatomic, strong) ADJTimerCycle *foregroundTimer;
 @property (nonatomic, strong) ADJTimerOnce *backgroundTimer;
@@ -103,6 +105,7 @@ const NSUInteger kWaitingForAttStatusLimitSeconds = 120;
 @property (nonatomic, copy) NSString* basePath;
 @property (nonatomic, copy) NSString* gdprPath;
 @property (nonatomic, copy) NSString* subscriptionPath;
+@property (nonatomic, copy) NSString* purchaseVerificationPath;
 
 - (void)prepareDeeplinkI:(ADJActivityHandler *_Nullable)selfI
             responseData:(ADJAttributionResponseData *_Nullable)attributionResponseData NS_EXTENSION_UNAVAILABLE_IOS("");
@@ -628,6 +631,15 @@ const NSUInteger kWaitingForAttStatusLimitSeconds = 120;
     }];
 }
 
+- (void)verifyPurchase:(nonnull ADJPurchase *)purchase
+     completionHandler:(void (^_Nonnull)(ADJPurchaseVerificationResult * _Nonnull verificationResult))completionHandler {
+    [ADJUtil launchInQueue:self.internalQueue
+                selfInject:self
+                     block:^(ADJActivityHandler * selfI) {
+        [selfI verifyPurchaseI:selfI purchase:purchase completionHandler:completionHandler];
+    }];
+}
+
 - (void)writeActivityState {
     [ADJUtil launchInQueue:self.internalQueue
                 selfInject:self
@@ -676,6 +688,10 @@ const NSUInteger kWaitingForAttStatusLimitSeconds = 120;
     return _subscriptionPath;
 }
 
+- (NSString *)getPurchaseVerificationPath {
+    return _purchaseVerificationPath;
+}
+
 - (void)teardown
 {
     [ADJAdjustFactory.logger verbose:@"ADJActivityHandler teardown"];
@@ -698,6 +714,9 @@ const NSUInteger kWaitingForAttStatusLimitSeconds = 120;
     if (self.sdkClickHandler != nil) {
         [self.sdkClickHandler teardown];
     }
+    if (self.purchaseVerificationHandler != nil) {
+        [self.purchaseVerificationHandler teardown];
+    }
     [self teardownActivityStateS];
     [self teardownAttributionS];
     [self teardownAllSessionParametersS];
@@ -708,6 +727,7 @@ const NSUInteger kWaitingForAttStatusLimitSeconds = 120;
     self.packageHandler = nil;
     self.attributionHandler = nil;
     self.sdkClickHandler = nil;
+    self.purchaseVerificationHandler = nil;
     self.foregroundTimer = nil;
     self.backgroundTimer = nil;
     self.adjustDelegate = nil;
@@ -718,13 +738,11 @@ const NSUInteger kWaitingForAttStatusLimitSeconds = 120;
     self.logger = nil;
 }
 
-+ (void)deleteState
-{
++ (void)deleteState {
     [ADJActivityHandler deleteActivityState];
     [ADJActivityHandler deleteAttribution];
     [ADJActivityHandler deleteSessionCallbackParameter];
     [ADJActivityHandler deleteSessionPartnerParameter];
-
     [ADJUserDefaults clearAdjustStuff];
 }
 
@@ -857,14 +875,18 @@ preLaunchActions:(ADJSavedPreLaunch*)preLaunchActions
              extraPath:preLaunchActions.extraPath];
 
     selfI.sdkClickHandler = [[ADJSdkClickHandler alloc]
-                                initWithActivityHandler:selfI
-                                startsSending:[selfI toSendI:selfI sdkClickHandlerOnly:YES]
-                                userAgent:selfI.adjustConfig.userAgent
-                                urlStrategy:sdkClickHandlerUrlStrategy];
+                             initWithActivityHandler:selfI
+                             startsSending:[selfI toSendI:selfI sdkClickHandlerOnly:YES]
+                             userAgent:selfI.adjustConfig.userAgent
+                             urlStrategy:sdkClickHandlerUrlStrategy];
+    selfI.purchaseVerificationHandler = [[ADJPurchaseVerificationHandler alloc]
+                                         initWithActivityHandler:selfI
+                                         startsSending:[selfI toSendI:selfI sdkClickHandlerOnly:YES]
+                                         userAgent:selfI.adjustConfig.userAgent
+                                         urlStrategy:sdkClickHandlerUrlStrategy];
 
-
-    // Update ATT status and idfa ,if necessary, in packages and sdk_click package queues.
-    // This should be done after `packageHandler` and `sdkClickHandler` are created.
+    // Update ATT status and IDFA, if necessary, in packages and sdk_click/verify packages queues.
+    // This should be done after packageHandler, sdkClickHandler and purchaseVerificationHandler are created.
     if (selfI.internalState.waitingForAttStatus) {
         selfI.internalState.updatePackagesAttData = YES;
         if (selfI.activityState != nil) {
@@ -1396,6 +1418,51 @@ preLaunchActions:(ADJSavedPreLaunch*)preLaunchActions
     }
     
     [selfI.trackingStatusManager checkForNewAttStatus];
+}
+
+- (void)verifyPurchaseI:(ADJActivityHandler *)selfI
+               purchase:(nonnull ADJPurchase *)purchase
+      completionHandler:(void (^_Nonnull)(ADJPurchaseVerificationResult * _Nonnull verificationResult))completionHandler {
+    if ([selfI.adjustConfig.urlStrategy isEqualToString:ADJDataResidencyEU] ||
+        [selfI.adjustConfig.urlStrategy isEqualToString:ADJDataResidencyUS] ||
+        [selfI.adjustConfig.urlStrategy isEqualToString:ADJDataResidencyTR]) {
+        [selfI.logger warn:@"Purchase verification not available for data residency users right now"];
+        return;
+    }
+    if (![selfI isEnabledI:selfI]) {
+        [selfI.logger warn:@"Purchase verification aborted because SDK is disabled"];
+        return;
+    }
+    if ([ADJUtil isNull:completionHandler]) {
+        [selfI.logger warn:@"Purchase verification aborted because completion handler is null"];
+        return;
+    }
+    if ([ADJUtil isNull:purchase]) {
+        [selfI.logger warn:@"Purchase verification aborted because purchase instance is null"];
+        ADJPurchaseVerificationResult *verificationResult = [[ADJPurchaseVerificationResult alloc] init];
+        verificationResult.verificationStatus = @"not_verified";
+        verificationResult.code = 101;
+        verificationResult.message = @"Purchase verification aborted because purchase instance is null";
+        completionHandler(verificationResult);
+        return;
+    }
+
+    double now = [NSDate.date timeIntervalSince1970];
+    [ADJUtil launchSynchronisedWithObject:[ADJActivityState class]
+                                    block:^{
+        double lastInterval = now - selfI.activityState.lastActivity;
+        selfI.activityState.lastInterval = lastInterval;
+    }];
+    ADJPackageBuilder *purchaseVerificationBuilder = [[ADJPackageBuilder alloc] initWithPackageParams:selfI.packageParams
+                                                                                        activityState:selfI.activityState
+                                                                                               config:selfI.adjustConfig
+                                                                                    sessionParameters:selfI.sessionParameters
+                                                                                trackingStatusManager:self.trackingStatusManager
+                                                                                            createdAt:now];
+
+    ADJActivityPackage *purchaseVerificationPackage = [purchaseVerificationBuilder buildPurchaseVerificationPackage:purchase];
+    purchaseVerificationPackage.purchaseVerificationCallback = completionHandler;
+    [selfI.purchaseVerificationHandler sendPurchaseVerificationPackage:purchaseVerificationPackage];
 }
 
 - (void)launchEventResponseTasksI:(ADJActivityHandler *)selfI
@@ -2283,8 +2350,10 @@ remainsPausedMessage:(NSString *)remainsPausedMessage
     // it's possible for the sdk click handler to be active while others are paused
     if (![selfI toSendI:selfI sdkClickHandlerOnly:YES]) {
         [selfI.sdkClickHandler pauseSending];
+        [selfI.purchaseVerificationHandler pauseSending];
     } else {
         [selfI.sdkClickHandler resumeSending];
+        [selfI.purchaseVerificationHandler resumeSending];
     }
 }
 
@@ -2292,6 +2361,7 @@ remainsPausedMessage:(NSString *)remainsPausedMessage
     [selfI.attributionHandler resumeSending];
     [selfI.packageHandler resumeSending];
     [selfI.sdkClickHandler resumeSending];
+    [selfI.purchaseVerificationHandler resumeSending];
 }
 
 - (BOOL)pausedI:(ADJActivityHandler *)selfI sdkClickHandlerOnly:(BOOL)sdkClickHandlerOnly {
@@ -2506,6 +2576,7 @@ sdkClickHandlerOnly:(BOOL)sdkClickHandlerOnly
     if (attStatus != 0) {
         [selfI.packageHandler updatePackagesWithIdfaAndAttStatus];
         [selfI.sdkClickHandler updatePackagesWithIdfaAndAttStatus];
+        [selfI.purchaseVerificationHandler updatePackagesWithIdfaAndAttStatus];
     }
 
     selfI.internalState.updatePackagesAttData = NO;
