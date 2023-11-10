@@ -1,3 +1,10 @@
+### Version 4.35.3 (13th November 2023)
+#### Added
+- Added support for `TopOn` and `ADX` ad revenue sources.
+- Added a new type of URL strategy called `ADJUrlStrategyCnOnly`. This URL strategy represents `ADJUrlStrategyCn` strategy, but without fallback domains.
+
+---
+
 ### Version 4.35.2 (9th October 2023)
 #### Added
 - Added sending of `event_callback_id` parameter (if set) with the event payload.
