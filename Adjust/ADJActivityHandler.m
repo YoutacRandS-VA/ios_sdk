@@ -860,7 +860,6 @@ preLaunchActions:(ADJSavedPreLaunch*)preLaunchActions
                                 initWithActivityHandler:selfI
                                 startsSending:
                                     [selfI toSendI:selfI sdkClickHandlerOnly:NO]
-                                userAgent:selfI.adjustConfig.userAgent
                                 urlStrategy:packageHandlerUrlStrategy];
 
     // update session parameters in package queue
@@ -877,7 +876,6 @@ preLaunchActions:(ADJSavedPreLaunch*)preLaunchActions
                                     initWithActivityHandler:selfI
                                     startsSending:
                                         [selfI toSendI:selfI sdkClickHandlerOnly:NO]
-                                    userAgent:selfI.adjustConfig.userAgent
                                     urlStrategy:attributionHandlerUrlStrategy];
 
     ADJUrlStrategy *sdkClickHandlerUrlStrategy =
@@ -888,12 +886,10 @@ preLaunchActions:(ADJSavedPreLaunch*)preLaunchActions
     selfI.sdkClickHandler = [[ADJSdkClickHandler alloc]
                              initWithActivityHandler:selfI
                              startsSending:[selfI toSendI:selfI sdkClickHandlerOnly:YES]
-                             userAgent:selfI.adjustConfig.userAgent
                              urlStrategy:sdkClickHandlerUrlStrategy];
     selfI.purchaseVerificationHandler = [[ADJPurchaseVerificationHandler alloc]
                                          initWithActivityHandler:selfI
                                          startsSending:[selfI toSendI:selfI sdkClickHandlerOnly:YES]
-                                         userAgent:selfI.adjustConfig.userAgent
                                          urlStrategy:sdkClickHandlerUrlStrategy];
 
     // Update ATT status and IDFA, if necessary, in packages and sdk_click/verify packages queues.
