@@ -31,8 +31,8 @@ typedef void (^activityHandlerBlockI)(ADJActivityHandler * activityHandler);
 
 static NSString   * const kActivityStateFilename                = @"AdjustIoActivityState";
 static NSString   * const kAttributionFilename                  = @"AdjustIoAttribution";
-static NSString   * const kSessionCallbackParametersFilename    = @"AdjustSessionCallbackParameters";
-static NSString   * const kSessionPartnerParametersFilename     = @"AdjustSessionPartnerParameters";
+static NSString   * const kGlobalCallbackParametersFilename     = @"AdjustSessionCallbackParameters";
+static NSString   * const kGlobalPartnerParametersFilename      = @"AdjustSessionPartnerParameters";
 static NSString   * const kAdjustPrefix                         = @"adjust_";
 static const char * const kInternalQueueName                    = "io.adjust.ActivityQueue";
 static const char * const kWaitingForAttQueueName               = "io.adjust.WaitingForAttQueue";
@@ -94,7 +94,7 @@ const NSUInteger kWaitingForAttStatusLimitSeconds = 120;
 @property (nonatomic, strong) ADJInternalState *internalState;
 @property (nonatomic, strong) ADJPackageParams *packageParams;
 @property (nonatomic, strong) ADJTimerOnce *delayStartTimer;
-@property (nonatomic, strong) ADJSessionParameters *sessionParameters;
+@property (nonatomic, strong) ADJGlobalParameters *globalParameters;
 // weak for object that Activity Handler does not "own"
 @property (nonatomic, weak) id<ADJLogger> logger;
 @property (nonatomic, weak) NSObject<AdjustDelegate> *adjustDelegate;
@@ -475,11 +475,11 @@ const NSUInteger kWaitingForAttStatusLimitSeconds = 120;
      }
      ADJPackageBuilder *clickBuilder = [[ADJPackageBuilder alloc]
                                         initWithPackageParams:selfI.packageParams
-                                       activityState:selfI.activityState
-                                       config:selfI.adjustConfig
-                                       sessionParameters:self.sessionParameters
-                                       trackingStatusManager:self.trackingStatusManager
-                                       createdAt:now];
+                                        activityState:selfI.activityState
+                                        config:selfI.adjustConfig
+                                        globalParameters:self.globalParameters
+                                        trackingStatusManager:self.trackingStatusManager
+                                        createdAt:now];
 
      ADJActivityPackage *clickPackage =
         [clickBuilder buildClickPackage:ADJAdServicesPackageKey
@@ -529,53 +529,53 @@ const NSUInteger kWaitingForAttStatusLimitSeconds = 120;
     }];
 }
 
-- (void)addSessionCallbackParameter:(NSString *)key
-                              value:(NSString *)value {
+- (void)addGlobalCallbackParameter:(NSString *)param
+                            forKey:(NSString *)key {
     [ADJUtil launchInQueue:self.internalQueue
                 selfInject:self
                      block:^(ADJActivityHandler * selfI) {
-                         [selfI addSessionCallbackParameterI:selfI key:key value:value];
+                         [selfI addGlobalCallbackParameterI:selfI param:param forKey:key];
                      }];
 }
 
-- (void)addSessionPartnerParameter:(NSString *)key
-                             value:(NSString *)value {
+- (void)addGlobalPartnerParameter:(NSString *)param
+                           forKey:(NSString *)key {
     [ADJUtil launchInQueue:self.internalQueue
                 selfInject:self
                      block:^(ADJActivityHandler * selfI) {
-                         [selfI addSessionPartnerParameterI:selfI key:key value:value];
+                         [selfI addGlobalPartnerParameterI:selfI param:param forKey:key];
                      }];
 }
 
-- (void)removeSessionCallbackParameter:(NSString *)key {
+- (void)removeGlobalCallbackParameterForKey:(NSString *)key {
     [ADJUtil launchInQueue:self.internalQueue
                 selfInject:self
                      block:^(ADJActivityHandler * selfI) {
-                         [selfI removeSessionCallbackParameterI:selfI key:key];
+                         [selfI removeGlobalCallbackParameterI:selfI forKey:key];
                      }];
 }
 
-- (void)removeSessionPartnerParameter:(NSString *)key {
+- (void)removeGlobalPartnerParameterForKey:(NSString *)key {
     [ADJUtil launchInQueue:self.internalQueue
                 selfInject:self
                      block:^(ADJActivityHandler * selfI) {
-                         [selfI removeSessionPartnerParameterI:selfI key:key];
+                         [selfI removeGlobalPartnerParameterI:selfI forKey:key];
                      }];
 }
 
-- (void)resetSessionCallbackParameters {
+- (void)removeGlobalCallbackParameters {
     [ADJUtil launchInQueue:self.internalQueue
                 selfInject:self
                      block:^(ADJActivityHandler * selfI) {
-                         [selfI resetSessionCallbackParametersI:selfI];
+                         [selfI removeGlobalCallbackParametersI:selfI];
                      }];
 }
 
-- (void)resetSessionPartnerParameters {
+- (void)removeGlobalPartnerParameters {
     [ADJUtil launchInQueue:self.internalQueue
                 selfInject:self
                      block:^(ADJActivityHandler * selfI) {
-                         [selfI resetSessionPartnerParametersI:selfI];
+                         [selfI removeGlobalPartnerParametersI:selfI];
                      }];
 }
 
@@ -663,11 +663,11 @@ const NSUInteger kWaitingForAttStatusLimitSeconds = 120;
 
     ADJPackageBuilder *infoBuilder = [[ADJPackageBuilder alloc]
                                       initWithPackageParams:selfI.packageParams
-                                                activityState:selfI.activityState
-                                                config:selfI.adjustConfig
-                                                sessionParameters:selfI.sessionParameters
-                                                trackingStatusManager:self.trackingStatusManager
-                                                createdAt:now];
+                                      activityState:selfI.activityState
+                                      config:selfI.adjustConfig
+                                      globalParameters:selfI.globalParameters
+                                      trackingStatusManager:self.trackingStatusManager
+                                      createdAt:now];
 
     ADJActivityPackage *infoPackage = [infoBuilder buildInfoPackage:@"att"];
     [selfI.packageHandler addPackage:infoPackage];
@@ -722,7 +722,7 @@ const NSUInteger kWaitingForAttStatusLimitSeconds = 120;
     }
     [self teardownActivityStateS];
     [self teardownAttributionS];
-    [self teardownAllSessionParametersS];
+    [self teardownAllGlobalParametersS];
 
     [ADJUtil teardown];
 
@@ -744,8 +744,8 @@ const NSUInteger kWaitingForAttStatusLimitSeconds = 120;
 + (void)deleteState {
     [ADJActivityHandler deleteActivityState];
     [ADJActivityHandler deleteAttribution];
-    [ADJActivityHandler deleteSessionCallbackParameter];
-    [ADJActivityHandler deleteSessionPartnerParameter];
+    [ADJActivityHandler deleteGlobalCallbackParameter];
+    [ADJActivityHandler deleteGlobalPartnerParameter];
     [ADJUserDefaults clearAdjustStuff];
 }
 
@@ -757,12 +757,12 @@ const NSUInteger kWaitingForAttStatusLimitSeconds = 120;
     [ADJUtil deleteFileWithName:kAttributionFilename];
 }
 
-+ (void)deleteSessionCallbackParameter {
-    [ADJUtil deleteFileWithName:kSessionCallbackParametersFilename];
++ (void)deleteGlobalCallbackParameter {
+    [ADJUtil deleteFileWithName:kGlobalCallbackParametersFilename];
 }
 
-+ (void)deleteSessionPartnerParameter {
-    [ADJUtil deleteFileWithName:kSessionPartnerParametersFilename];
++ (void)deleteGlobalPartnerParameter {
+    [ADJUtil deleteFileWithName:kGlobalPartnerParametersFilename];
 }
 
 #pragma mark - internal
@@ -780,9 +780,9 @@ preLaunchActions:(ADJSavedPreLaunch*)preLaunchActions
     selfI.packageParams = [ADJPackageParams packageParamsWithSdkPrefix:selfI.adjustConfig.sdkPrefix];
 
     // read files that are accessed only in Internal sections
-    selfI.sessionParameters = [[ADJSessionParameters alloc] init];
-    [selfI readSessionCallbackParametersI:selfI];
-    [selfI readSessionPartnerParametersI:selfI];
+    selfI.globalParameters = [[ADJGlobalParameters alloc] init];
+    [selfI readGlobalCallbackParametersI:selfI];
+    [selfI readGlobalPartnerParametersI:selfI];
 
     if (selfI.adjustConfig.eventBufferingEnabled)  {
         [selfI.logger info:@"Event buffering is enabled"];
@@ -1089,7 +1089,7 @@ preLaunchActions:(ADJSavedPreLaunch*)preLaunchActions
                                          initWithPackageParams:selfI.packageParams
                                          activityState:selfI.activityState
                                          config:selfI.adjustConfig
-                                         sessionParameters:selfI.sessionParameters
+                                         globalParameters:selfI.globalParameters
                                          trackingStatusManager:self.trackingStatusManager
                                          createdAt:now];
     ADJActivityPackage *sessionPackage = [sessionBuilder buildSessionPackage:[selfI.internalState isInDelayedStart]];
@@ -1164,7 +1164,7 @@ preLaunchActions:(ADJSavedPreLaunch*)preLaunchActions
                                        initWithPackageParams:selfI.packageParams
                                        activityState:selfI.activityState
                                        config:selfI.adjustConfig
-                                       sessionParameters:selfI.sessionParameters
+                                       globalParameters:selfI.globalParameters
                                        trackingStatusManager:self.trackingStatusManager
                                        createdAt:now];
     ADJActivityPackage *eventPackage = [eventBuilder buildEventPackage:event
@@ -1202,11 +1202,11 @@ preLaunchActions:(ADJSavedPreLaunch*)preLaunchActions
     // Create and submit ad revenue package.
     ADJPackageBuilder *subscriptionBuilder = [[ADJPackageBuilder alloc]
                                               initWithPackageParams:selfI.packageParams
-                                                    activityState:selfI.activityState
-                                                    config:selfI.adjustConfig
-                                                    sessionParameters:selfI.sessionParameters
-                                                    trackingStatusManager:self.trackingStatusManager
-                                                    createdAt:now];
+                                              activityState:selfI.activityState
+                                              config:selfI.adjustConfig
+                                              globalParameters:selfI.globalParameters
+                                              trackingStatusManager:self.trackingStatusManager
+                                              createdAt:now];
 
     ADJActivityPackage *subscriptionPackage = [subscriptionBuilder buildSubscriptionPackage:subscription
                                                                                   isInDelay:[selfI.internalState isInDelayedStart]];
@@ -1240,11 +1240,11 @@ preLaunchActions:(ADJSavedPreLaunch*)preLaunchActions
     // build package
     ADJPackageBuilder *tpsBuilder = [[ADJPackageBuilder alloc]
                                      initWithPackageParams:selfI.packageParams
-                                            activityState:selfI.activityState
-                                            config:selfI.adjustConfig
-                                            sessionParameters:selfI.sessionParameters
-                                            trackingStatusManager:self.trackingStatusManager
-                                            createdAt:now];
+                                     activityState:selfI.activityState
+                                     config:selfI.adjustConfig
+                                     globalParameters:selfI.globalParameters
+                                     trackingStatusManager:self.trackingStatusManager
+                                     createdAt:now];
 
     ADJActivityPackage *dtpsPackage = [tpsBuilder buildThirdPartySharingPackage:thirdPartySharing];
 
@@ -1277,11 +1277,11 @@ preLaunchActions:(ADJSavedPreLaunch*)preLaunchActions
     // build package
     ADJPackageBuilder *tpsBuilder = [[ADJPackageBuilder alloc]
                                      initWithPackageParams:selfI.packageParams
-                                            activityState:selfI.activityState
-                                            config:selfI.adjustConfig
-                                            sessionParameters:selfI.sessionParameters
-                                            trackingStatusManager:self.trackingStatusManager
-                                            createdAt:now];
+                                     activityState:selfI.activityState
+                                     config:selfI.adjustConfig
+                                     globalParameters:selfI.globalParameters
+                                     trackingStatusManager:self.trackingStatusManager
+                                     createdAt:now];
 
     ADJActivityPackage *mcPackage = [tpsBuilder buildMeasurementConsentPackage:enabled];
 
@@ -1316,11 +1316,11 @@ preLaunchActions:(ADJSavedPreLaunch*)preLaunchActions
 
     // Create and submit ad revenue package.
     ADJPackageBuilder *adRevenueBuilder = [[ADJPackageBuilder alloc] initWithPackageParams:selfI.packageParams
-                                                                          activityState:selfI.activityState
-                                                                                 config:selfI.adjustConfig
-                                                                      sessionParameters:selfI.sessionParameters
-                                                                  trackingStatusManager:self.trackingStatusManager
-                                                                              createdAt:now];
+                                                                             activityState:selfI.activityState
+                                                                                    config:selfI.adjustConfig
+                                                                          globalParameters:selfI.globalParameters
+                                                                     trackingStatusManager:self.trackingStatusManager
+                                                                                 createdAt:now];
 
     ADJActivityPackage *adRevenuePackage = [adRevenueBuilder buildAdRevenuePackage:adRevenue
                                                                          isInDelay:[selfI.internalState isInDelayedStart]];
@@ -1385,7 +1385,7 @@ preLaunchActions:(ADJSavedPreLaunch*)preLaunchActions
     ADJPackageBuilder *purchaseVerificationBuilder = [[ADJPackageBuilder alloc] initWithPackageParams:selfI.packageParams
                                                                                         activityState:selfI.activityState
                                                                                                config:selfI.adjustConfig
-                                                                                    sessionParameters:selfI.sessionParameters
+                                                                                     globalParameters:selfI.globalParameters
                                                                                 trackingStatusManager:self.trackingStatusManager
                                                                                             createdAt:now];
 
@@ -1797,11 +1797,11 @@ remainsPausedMessage:(NSString *)remainsPausedMessage
     }];
     ADJPackageBuilder *clickBuilder = [[ADJPackageBuilder alloc]
                                        initWithPackageParams:selfI.packageParams
-                                                activityState:selfI.activityState
-                                                config:selfI.adjustConfig
-                                                sessionParameters:selfI.sessionParameters
-                                                trackingStatusManager:self.trackingStatusManager
-                                                createdAt:now];
+                                       activityState:selfI.activityState
+                                       config:selfI.adjustConfig
+                                       globalParameters:selfI.globalParameters
+                                       trackingStatusManager:self.trackingStatusManager
+                                       createdAt:now];
 
     clickBuilder.deeplinkParameters = [adjustDeepLinks copy];
     clickBuilder.attribution = deeplinkAttribution;
@@ -1901,11 +1901,11 @@ remainsPausedMessage:(NSString *)remainsPausedMessage
     double now = [NSDate.date timeIntervalSince1970];
     ADJPackageBuilder *infoBuilder = [[ADJPackageBuilder alloc]
                                       initWithPackageParams:selfI.packageParams
-                                                activityState:selfI.activityState
-                                                config:selfI.adjustConfig
-                                                sessionParameters:selfI.sessionParameters
-                                                trackingStatusManager:self.trackingStatusManager
-                                                createdAt:now];
+                                      activityState:selfI.activityState
+                                      config:selfI.adjustConfig
+                                      globalParameters:selfI.globalParameters
+                                      trackingStatusManager:self.trackingStatusManager
+                                      createdAt:now];
 
     ADJActivityPackage *infoPackage = [infoBuilder buildInfoPackage:@"push"];
 
@@ -1950,11 +1950,11 @@ remainsPausedMessage:(NSString *)remainsPausedMessage
     double now = [NSDate.date timeIntervalSince1970];
     ADJPackageBuilder *infoBuilder = [[ADJPackageBuilder alloc]
                                       initWithPackageParams:selfI.packageParams
-                                                activityState:selfI.activityState
-                                                config:selfI.adjustConfig
-                                                sessionParameters:selfI.sessionParameters
-                                                trackingStatusManager:self.trackingStatusManager
-                                                createdAt:now];
+                                      activityState:selfI.activityState
+                                      config:selfI.adjustConfig
+                                      globalParameters:selfI.globalParameters
+                                      trackingStatusManager:self.trackingStatusManager
+                                      createdAt:now];
 
     ADJActivityPackage *infoPackage = [infoBuilder buildInfoPackage:@"push"];
     [selfI.packageHandler addPackage:infoPackage];
@@ -1991,11 +1991,11 @@ remainsPausedMessage:(NSString *)remainsPausedMessage
     double now = [NSDate.date timeIntervalSince1970];
     ADJPackageBuilder *gdprBuilder = [[ADJPackageBuilder alloc]
                                       initWithPackageParams:selfI.packageParams
-                                            activityState:selfI.activityState
-                                            config:selfI.adjustConfig
-                                            sessionParameters:selfI.sessionParameters
-                                            trackingStatusManager:self.trackingStatusManager
-                                            createdAt:now];
+                                      activityState:selfI.activityState
+                                      config:selfI.adjustConfig
+                                      globalParameters:selfI.globalParameters
+                                      trackingStatusManager:self.trackingStatusManager
+                                      createdAt:now];
 
     ADJActivityPackage *gdprPackage = [gdprBuilder buildGdprPackage];
     [selfI.packageHandler addPackage:gdprPackage];
@@ -2065,7 +2065,7 @@ remainsPausedMessage:(NSString *)remainsPausedMessage
         ADJPackageBuilder *clickBuilder = [[ADJPackageBuilder alloc] initWithPackageParams:selfI.packageParams
                                                                              activityState:selfI.activityState
                                                                                     config:selfI.adjustConfig
-                                                                         sessionParameters:selfI.sessionParameters
+                                                                          globalParameters:selfI.globalParameters
                                                                      trackingStatusManager:self.trackingStatusManager
                                                                                  createdAt:now];
         clickBuilder.clickTime = [NSDate dateWithTimeIntervalSince1970:now];
@@ -2206,53 +2206,53 @@ remainsPausedMessage:(NSString *)remainsPausedMessage
                                 syncObject:[ADJAttribution class]];
 }
 
-- (void)writeSessionCallbackParametersI:(ADJActivityHandler *)selfI {
-    @synchronized ([ADJSessionParameters class]) {
-        if (selfI.sessionParameters == nil) {
+- (void)writeGlobalCallbackParametersI:(ADJActivityHandler *)selfI {
+    @synchronized ([ADJGlobalParameters class]) {
+        if (selfI.globalParameters == nil) {
             return;
         }
-        [ADJUtil writeObject:selfI.sessionParameters.callbackParameters
-                    fileName:kSessionCallbackParametersFilename
-                  objectName:@"Session Callback parameters"
-                  syncObject:[ADJSessionParameters class]];
+        [ADJUtil writeObject:selfI.globalParameters.callbackParameters
+                    fileName:kGlobalCallbackParametersFilename
+                  objectName:@"Global Callback parameters"
+                  syncObject:[ADJGlobalParameters class]];
     }
 }
 
-- (void)writeSessionPartnerParametersI:(ADJActivityHandler *)selfI {
-    @synchronized ([ADJSessionParameters class]) {
-        if (selfI.sessionParameters == nil) {
+- (void)writeGlobalPartnerParametersI:(ADJActivityHandler *)selfI {
+    @synchronized ([ADJGlobalParameters class]) {
+        if (selfI.globalParameters == nil) {
             return;
         }
-        [ADJUtil writeObject:selfI.sessionParameters.partnerParameters
-                    fileName:kSessionPartnerParametersFilename
-                  objectName:@"Session Partner parameters"
-                  syncObject:[ADJSessionParameters class]];
+        [ADJUtil writeObject:selfI.globalParameters.partnerParameters
+                    fileName:kGlobalPartnerParametersFilename
+                  objectName:@"Global Partner parameters"
+                  syncObject:[ADJGlobalParameters class]];
     }
 }
 
-- (void)teardownAllSessionParametersS {
-    @synchronized ([ADJSessionParameters class]) {
-        if (self.sessionParameters == nil) {
+- (void)teardownAllGlobalParametersS {
+    @synchronized ([ADJGlobalParameters class]) {
+        if (self.globalParameters == nil) {
             return;
         }
-        [self.sessionParameters.callbackParameters removeAllObjects];
-        [self.sessionParameters.partnerParameters removeAllObjects];
-        self.sessionParameters = nil;
+        [self.globalParameters.callbackParameters removeAllObjects];
+        [self.globalParameters.partnerParameters removeAllObjects];
+        self.globalParameters = nil;
     }
 }
 
-- (void)readSessionCallbackParametersI:(ADJActivityHandler *)selfI {
-    selfI.sessionParameters.callbackParameters = [ADJUtil readObject:kSessionCallbackParametersFilename
-                                                         objectName:@"Session Callback parameters"
+- (void)readGlobalCallbackParametersI:(ADJActivityHandler *)selfI {
+    selfI.globalParameters.callbackParameters = [ADJUtil readObject:kGlobalCallbackParametersFilename
+                                                         objectName:@"Global Callback parameters"
                                                               class:[NSDictionary class]
-                                                         syncObject:[ADJSessionParameters class]];
+                                                         syncObject:[ADJGlobalParameters class]];
 }
 
-- (void)readSessionPartnerParametersI:(ADJActivityHandler *)selfI {
-    selfI.sessionParameters.partnerParameters = [ADJUtil readObject:kSessionPartnerParametersFilename
-                                                        objectName:@"Session Partner parameters"
+- (void)readGlobalPartnerParametersI:(ADJActivityHandler *)selfI {
+    selfI.globalParameters.partnerParameters = [ADJUtil readObject:kGlobalPartnerParametersFilename
+                                                        objectName:@"Global Partner parameters"
                                                              class:[NSDictionary class]
-                                                        syncObject:[ADJSessionParameters class]];
+                                                        syncObject:[ADJGlobalParameters class]];
 }
 
 # pragma mark - handlers status
@@ -2469,7 +2469,7 @@ sdkClickHandlerOnly:(BOOL)sdkClickHandlerOnly
 
 - (void)updatePackagesI:(ADJActivityHandler *)selfI {
     // update activity packages
-    [selfI.packageHandler updatePackagesWithSessionParams:selfI.sessionParameters];
+    [selfI.packageHandler updatePackagesWithGlobalParams:selfI.globalParameters];
     // no longer needs to update packages
     selfI.internalState.updatePackages = NO;
     if (selfI.activityState != nil) {
@@ -2526,57 +2526,62 @@ sdkClickHandlerOnly:(BOOL)sdkClickHandlerOnly
 }
 
 #pragma mark - session parameters
-- (void)addSessionCallbackParameterI:(ADJActivityHandler *)selfI
-                                 key:(NSString *)key
-                              value:(NSString *)value
-{
-    if (![ADJUtil isValidParameter:key
-                  attributeType:@"key"
-                  parameterName:@"Session Callback"]) return;
-
-    if (![ADJUtil isValidParameter:value
-                  attributeType:@"value"
-                  parameterName:@"Session Callback"]) return;
-
-    if (selfI.sessionParameters.callbackParameters == nil) {
-        selfI.sessionParameters.callbackParameters = [NSMutableDictionary dictionary];
-    }
-
-    NSString * oldValue = [selfI.sessionParameters.callbackParameters objectForKey:key];
-
-    if (oldValue != nil) {
-        if ([oldValue isEqualToString:value]) {
-            [selfI.logger verbose:@"Key %@ already present with the same value", key];
-            return;
-        }
-        [selfI.logger warn:@"Key %@ will be overwritten", key];
-    }
-
-    [selfI.sessionParameters.callbackParameters setObject:value forKey:key];
-
-    [selfI writeSessionCallbackParametersI:selfI];
-}
-
-- (void)addSessionPartnerParameterI:(ADJActivityHandler *)selfI
-                               key:(NSString *)key
-                             value:(NSString *)value
-{
+- (void)addGlobalCallbackParameterI:(ADJActivityHandler *)selfI
+                              param:(NSString *)param
+                             forKey:(NSString *)key {
     if (![ADJUtil isValidParameter:key
                      attributeType:@"key"
-                     parameterName:@"Session Partner"]) return;
+                     parameterName:@"Global Callback"]) {
+        return;
+    }
 
-    if (![ADJUtil isValidParameter:value
+    if (![ADJUtil isValidParameter:param
                      attributeType:@"value"
-                     parameterName:@"Session Partner"]) return;
-
-    if (selfI.sessionParameters.partnerParameters == nil) {
-        selfI.sessionParameters.partnerParameters = [NSMutableDictionary dictionary];
+                     parameterName:@"Global Callback"]) {
+        return;
     }
 
-    NSString * oldValue = [selfI.sessionParameters.partnerParameters objectForKey:key];
+    if (selfI.globalParameters.callbackParameters == nil) {
+        selfI.globalParameters.callbackParameters = [NSMutableDictionary dictionary];
+    }
+
+    NSString *oldValue = [selfI.globalParameters.callbackParameters objectForKey:key];
 
     if (oldValue != nil) {
-        if ([oldValue isEqualToString:value]) {
+        if ([oldValue isEqualToString:param]) {
+            [selfI.logger verbose:@"Key %@ already present with the same value", key];
+            return;
+        }
+        [selfI.logger warn:@"Key %@ will be overwritten", key];
+    }
+
+    [selfI.globalParameters.callbackParameters setObject:param forKey:key];
+    [selfI writeGlobalCallbackParametersI:selfI];
+}
+
+- (void)addGlobalPartnerParameterI:(ADJActivityHandler *)selfI
+                               param:(NSString *)param
+                             forKey:(NSString *)key {
+    if (![ADJUtil isValidParameter:key
+                     attributeType:@"key"
+                     parameterName:@"Global Partner"]) {
+        return;
+    }
+
+    if (![ADJUtil isValidParameter:param
+                     attributeType:@"value"
+                     parameterName:@"Global Partner"]) {
+        return;
+    }
+
+    if (selfI.globalParameters.partnerParameters == nil) {
+        selfI.globalParameters.partnerParameters = [NSMutableDictionary dictionary];
+    }
+
+    NSString *oldValue = [selfI.globalParameters.partnerParameters objectForKey:key];
+
+    if (oldValue != nil) {
+        if ([oldValue isEqualToString:param]) {
             [selfI.logger verbose:@"Key %@ already present with the same value", key];
             return;
         }
@@ -2584,71 +2589,72 @@ sdkClickHandlerOnly:(BOOL)sdkClickHandlerOnly
     }
 
 
-    [selfI.sessionParameters.partnerParameters setObject:value forKey:key];
-
-    [selfI writeSessionPartnerParametersI:selfI];
+    [selfI.globalParameters.partnerParameters setObject:param forKey:key];
+    [selfI writeGlobalPartnerParametersI:selfI];
 }
 
-- (void)removeSessionCallbackParameterI:(ADJActivityHandler *)selfI
-                                    key:(NSString *)key {
+- (void)removeGlobalCallbackParameterI:(ADJActivityHandler *)selfI
+                                forKey:(NSString *)key {
     if (![ADJUtil isValidParameter:key
                      attributeType:@"key"
-                     parameterName:@"Session Callback"]) return;
+                     parameterName:@"Global Callback"]) return;
 
-    if (selfI.sessionParameters.callbackParameters == nil) {
-        [selfI.logger warn:@"Session Callback parameters are not set"];
+    if (selfI.globalParameters.callbackParameters == nil) {
+        [selfI.logger warn:@"Global Callback parameters are not set"];
         return;
     }
 
-    NSString * oldValue = [selfI.sessionParameters.callbackParameters objectForKey:key];
+    NSString *oldValue = [selfI.globalParameters.callbackParameters objectForKey:key];
     if (oldValue == nil) {
         [selfI.logger warn:@"Key %@ does not exist", key];
         return;
     }
 
     [selfI.logger debug:@"Key %@ will be removed", key];
-    [selfI.sessionParameters.callbackParameters removeObjectForKey:key];
-    [selfI writeSessionCallbackParametersI:selfI];
+    [selfI.globalParameters.callbackParameters removeObjectForKey:key];
+    [selfI writeGlobalCallbackParametersI:selfI];
 }
 
-- (void)removeSessionPartnerParameterI:(ADJActivityHandler *)selfI
-                                   key:(NSString *)key {
+- (void)removeGlobalPartnerParameterI:(ADJActivityHandler *)selfI
+                               forKey:(NSString *)key {
     if (![ADJUtil isValidParameter:key
                      attributeType:@"key"
-                     parameterName:@"Session Partner"]) return;
-
-    if (selfI.sessionParameters.partnerParameters == nil) {
-        [selfI.logger warn:@"Session Partner parameters are not set"];
+                     parameterName:@"Global Partner"]) {
         return;
     }
 
-    NSString * oldValue = [selfI.sessionParameters.partnerParameters objectForKey:key];
+    if (selfI.globalParameters.partnerParameters == nil) {
+        [selfI.logger warn:@"Global Partner parameters are not set"];
+        return;
+    }
+
+    NSString *oldValue = [selfI.globalParameters.partnerParameters objectForKey:key];
     if (oldValue == nil) {
         [selfI.logger warn:@"Key %@ does not exist", key];
         return;
     }
 
     [selfI.logger debug:@"Key %@ will be removed", key];
-    [selfI.sessionParameters.partnerParameters removeObjectForKey:key];
-    [selfI writeSessionPartnerParametersI:selfI];
+    [selfI.globalParameters.partnerParameters removeObjectForKey:key];
+    [selfI writeGlobalPartnerParametersI:selfI];
 }
 
-- (void)resetSessionCallbackParametersI:(ADJActivityHandler *)selfI {
-    if (selfI.sessionParameters.callbackParameters == nil) {
-        [selfI.logger warn:@"Session Callback parameters are not set"];
+- (void)removeGlobalCallbackParametersI:(ADJActivityHandler *)selfI {
+    if (selfI.globalParameters.callbackParameters == nil) {
+        [selfI.logger warn:@"Global Callback parameters are not set"];
         return;
     }
-    selfI.sessionParameters.callbackParameters = nil;
-    [selfI writeSessionCallbackParametersI:selfI];
+    selfI.globalParameters.callbackParameters = nil;
+    [selfI writeGlobalCallbackParametersI:selfI];
 }
 
-- (void)resetSessionPartnerParametersI:(ADJActivityHandler *)selfI {
-    if (selfI.sessionParameters.partnerParameters == nil) {
-        [selfI.logger warn:@"Session Partner parameters are not set"];
+- (void)removeGlobalPartnerParametersI:(ADJActivityHandler *)selfI {
+    if (selfI.globalParameters.partnerParameters == nil) {
+        [selfI.logger warn:@"Global Partner parameters are not set"];
         return;
     }
-    selfI.sessionParameters.partnerParameters = nil;
-    [selfI writeSessionPartnerParametersI:selfI];
+    selfI.globalParameters.partnerParameters = nil;
+    [selfI writeGlobalPartnerParametersI:selfI];
 }
 
 - (void)preLaunchActionsI:(ADJActivityHandler *)selfI
@@ -2822,7 +2828,7 @@ sdkClickHandlerOnly:(BOOL)sdkClickHandlerOnly
                                      initWithPackageParams:selfI.packageParams
                                      activityState:selfI.activityState
                                      config:selfI.adjustConfig
-                                     sessionParameters:selfI.sessionParameters
+                                     globalParameters:selfI.globalParameters
                                      trackingStatusManager:self.trackingStatusManager
                                      createdAt:now];
     
