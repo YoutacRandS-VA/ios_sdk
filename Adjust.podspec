@@ -20,19 +20,9 @@ Pod::Spec.new do |s|
     co.resource_bundle = {'Adjust' => ['Adjust/*.xcprivacy']}
   end
 
-  s.subspec 'Sociomantic' do |sm|
-    sm.source_files = 'plugin/Sociomantic/*.{h,m}'
-    sm.dependency 'Adjust/Core'
-  end
-
   s.subspec 'Criteo' do |cr|
     cr.source_files = 'plugin/Criteo/*.{h,m}'
     cr.dependency 'Adjust/Core'
-  end
-
-  s.subspec 'Trademob' do |tm|
-    tm.source_files = 'plugin/Trademob/*.{h,m}'
-    tm.dependency 'Adjust/Core'
   end
 
   s.subspec 'WebBridge' do |wb|
