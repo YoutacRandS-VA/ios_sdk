@@ -291,17 +291,17 @@ AdjustCommandExecutor.prototype.config = function(params) {
         adjustConfig.setAttributionCallback(
             function(attribution) {
                 console.log('attributionCallback: ' + JSON.stringify(attribution));
-                addInfoToSend('trackerToken', attribution.trackerToken);
-                addInfoToSend('trackerName', attribution.trackerName);
+                addInfoToSend('tracker_token', attribution.trackerToken);
+                addInfoToSend('tracker_name', attribution.trackerName);
                 addInfoToSend('network', attribution.network);
                 addInfoToSend('campaign', attribution.campaign);
                 addInfoToSend('adgroup', attribution.adgroup);
                 addInfoToSend('creative', attribution.creative);
-                addInfoToSend('clickLabel', attribution.click_label);
+                addInfoToSend('click_label', attribution.click_label);
                 addInfoToSend('adid', attribution.adid);
-                addInfoToSend('costType', attribution.costType);
-                addInfoToSend('costAmount', attribution.costAmount);
-                addInfoToSend('costCurrency', attribution.costCurrency);
+                addInfoToSend('cost_type', attribution.costType);
+                addInfoToSend('cost_amount', attribution.costAmount);
+                addInfoToSend('cost_currency', attribution.costCurrency);
                 addInfoToSend('state', attribution.state);
                 WebViewJavascriptBridge.callHandler('adjustTLB_sendInfoToServer', extraPath, null);
             }
@@ -504,50 +504,50 @@ AdjustCommandExecutor.prototype.gdprForgetMe = function(params) {
     Adjust.gdprForgetMe();
 };
 
-AdjustCommandExecutor.prototype.addSessionCallbackParameter = function(params) {
+AdjustCommandExecutor.prototype.addGlobalCallbackParameter = function(params) {
     var list = getValues(params, 'KeyValue');
 
     for (var i = 0; i < list.length; i = i+2){
         var key = list[i];
         var value = list[i+1];
-        Adjust.addSessionCallbackParameter(key, value);
+        Adjust.addGlobalCallbackParameter(key, value);
     }
 };
 
-AdjustCommandExecutor.prototype.addSessionPartnerParameter = function(params) {
+AdjustCommandExecutor.prototype.addGlobalPartnerParameter = function(params) {
     var list = getValues(params, 'KeyValue');
 
     for (var i = 0; i < list.length; i = i+2){
         var key = list[i];
         var value = list[i+1];
-        Adjust.addSessionPartnerParameter(key, value);
+        Adjust.addGlobalPartnerParameter(key, value);
     }
 };
 
-AdjustCommandExecutor.prototype.removeSessionCallbackParameter = function(params) {
+AdjustCommandExecutor.prototype.removeGlobalCallbackParameter = function(params) {
     var list = getValues(params, 'key');
 
     for (var i = 0; i < list.length; i++) {
         var key = list[i];
-        Adjust.removeSessionCallbackParameter(key);
+        Adjust.removeGlobalCallbackParameter(key);
     }
 };
 
-AdjustCommandExecutor.prototype.removeSessionPartnerParameter = function(params) {
+AdjustCommandExecutor.prototype.removeGlobalPartnerParameter = function(params) {
     var list = getValues(params, 'key');
 
     for (var i = 0; i < list.length; i++) {
         var key = list[i];
-        Adjust.removeSessionPartnerParameter(key);
+        Adjust.removeGlobalPartnerParameter(key);
     }
 };
 
-AdjustCommandExecutor.prototype.resetSessionCallbackParameters = function(params) {
-    Adjust.resetSessionCallbackParameters();
+AdjustCommandExecutor.prototype.removeGlobalCallbackParameters = function(params) {
+    Adjust.removeGlobalCallbackParameters();
 };
 
-AdjustCommandExecutor.prototype.resetSessionPartnerParameters = function(params) {
-    Adjust.resetSessionPartnerParameters();
+AdjustCommandExecutor.prototype.removeGlobalPartnerParameters = function(params) {
+    Adjust.removeGlobalPartnerParameters();
 };
 
 AdjustCommandExecutor.prototype.setPushToken = function(params) {
