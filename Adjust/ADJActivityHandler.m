@@ -744,8 +744,8 @@ const NSUInteger kWaitingForAttStatusLimitSeconds = 120;
 + (void)deleteState {
     [ADJActivityHandler deleteActivityState];
     [ADJActivityHandler deleteAttribution];
-    [ADJActivityHandler deleteGlobalCallbackParameter];
-    [ADJActivityHandler deleteGlobalPartnerParameter];
+    [ADJActivityHandler deleteGlobalCallbackParameters];
+    [ADJActivityHandler deleteGlobalPartnerParameters];
     [ADJUserDefaults clearAdjustStuff];
 }
 
@@ -757,11 +757,11 @@ const NSUInteger kWaitingForAttStatusLimitSeconds = 120;
     [ADJUtil deleteFileWithName:kAttributionFilename];
 }
 
-+ (void)deleteGlobalCallbackParameter {
++ (void)deleteGlobalCallbackParameters {
     [ADJUtil deleteFileWithName:kGlobalCallbackParametersFilename];
 }
 
-+ (void)deleteGlobalPartnerParameter {
++ (void)deleteGlobalPartnerParameters {
     [ADJUtil deleteFileWithName:kGlobalPartnerParametersFilename];
 }
 
