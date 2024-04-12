@@ -188,7 +188,6 @@
         NSString *logLevel = [data objectForKey:@"logLevel"];
         NSNumber *eventBufferingEnabled = [data objectForKey:@"eventBufferingEnabled"];
         NSNumber *coppaCompliantEnabled = [data objectForKey:@"coppaCompliantEnabled"];
-        NSNumber *linkMeEnabled = [data objectForKey:@"linkMeEnabled"];
         NSNumber *sendInBackground = [data objectForKey:@"sendInBackground"];
         NSNumber *delayStart = [data objectForKey:@"delayStart"];
         NSNumber *needsCost = [data objectForKey:@"needsCost"];
@@ -242,9 +241,6 @@
         }
         if ([self isFieldValid:coppaCompliantEnabled]) {
             [adjustConfig setCoppaCompliantEnabled:[coppaCompliantEnabled boolValue]];
-        }
-        if ([self isFieldValid:linkMeEnabled]) {
-            [adjustConfig setLinkMeEnabled:[linkMeEnabled boolValue]];
         }
         if ([self isFieldValid:sendInBackground]) {
             [adjustConfig setSendInBackground:[sendInBackground boolValue]];
