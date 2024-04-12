@@ -986,8 +986,6 @@ NSString * const ADJAttributionTokenParameter = @"attribution_token";
 }
 
 - (void)injectFeatureFlagsWithParameters:(NSMutableDictionary *)parameters {
-    [ADJPackageBuilder parameters:parameters setBool:self.adjustConfig.eventBufferingEnabled
-                           forKey:@"event_buffering_enabled"];
     if (self.adjustConfig.coppaCompliantEnabled == YES) {
         [ADJPackageBuilder parameters:parameters setBool:YES forKey:@"ff_coppa"];
     }
