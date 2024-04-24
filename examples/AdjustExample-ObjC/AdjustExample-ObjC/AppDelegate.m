@@ -131,9 +131,9 @@
     return YES;
 }
 
-- (void)adjustConversionValueUpdated:(NSNumber *)conversionValue {
+- (void)adjustSkanUpdatedWithConversionData:(NSDictionary<NSString *, NSString *> *)data {
     NSLog(@"Conversion value updated callback called!");
-    NSLog(@"Conversion value: %@", conversionValue);
+    NSLog(@"Conversion value dictionary: \n%@", data.description);
 }
 
 - (void)applicationWillResignActive:(UIApplication *)application {

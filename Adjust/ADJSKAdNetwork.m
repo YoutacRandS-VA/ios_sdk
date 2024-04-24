@@ -145,7 +145,10 @@
 
 #pragma mark - Adjust helper methods
 
-- (void)adjRegisterWithCompletionHandler:(void (^)(NSError *error))callback {
+- (void)adjRegisterWithConversionValue:(NSInteger)conversionValue
+                           coarseValue:(NSString *)coarseValue
+                            lockWindow:(NSNumber *)lockWindow
+                     completionHandler:(void (^)(NSError *error))callback {
     if (NSClassFromString(@"SKAdNetwork") == nil) {
         [self.logger debug:@"StoreKit.framework not found in the app (SKAdNetwork class not found)"];
         return;
@@ -157,14 +160,14 @@
     }
 
     if (@available(iOS 16.1, *)) {
-        [self updatePostbackConversionValue:0
-                                coarseValue:[self getSkAdNetworkCoarseConversionValue:@"low"]
-                                 lockWindow:NO
+        [self updatePostbackConversionValue:conversionValue
+                                coarseValue:[self getSkAdNetworkCoarseConversionValue:coarseValue]
+                                 lockWindow:lockWindow
                           completionHandler:^(NSError * _Nonnull error) {
             callback(error);
         }];
     } else if (@available(iOS 15.4, *)) {
-        [self updatePostbackConversionValue:0
+        [self updatePostbackConversionValue:conversionValue
                           completionHandler:^(NSError * _Nonnull error) {
             callback(error);
         }];
