@@ -103,7 +103,7 @@ static const char * const kInternalQueueName    = "io.adjust.PackageQueue";
     [ADJUtil launchInQueue:self.internalQueue
                 selfInject:self
                      block:^(ADJPackageHandler* selfI) {
-        [selfI sendNextI:selfI];
+        [selfI sendNextI:selfI previousResponseContinueIn:responseData.continueInMilli];
     }];
 
     [self.activityHandler finishedTracking:responseData];
@@ -126,7 +126,7 @@ static const char * const kInternalQueueName    = "io.adjust.PackageQueue";
 
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(waitTime * NSEC_PER_SEC)),
                    self.internalQueue, ^{
-        [self.logger verbose:@"Package handler finished waiting"];
+        [self.logger verbose:@"Package handler finished waiting to retry"];
         dispatch_semaphore_signal(self.sendingSemaphore);
         [self sendFirstPackage];
     });
@@ -254,7 +254,7 @@ startsSending:(BOOL)startsSending
     ADJActivityPackage *activityPackage = [selfI.packageQueue objectAtIndex:0];
     if (![activityPackage isKindOfClass:[ADJActivityPackage class]]) {
         [selfI.logger error:@"Failed to read activity package"];
-        [selfI sendNextI:selfI];
+        [selfI sendNextI:selfI previousResponseContinueIn:nil];
         return;
     }
 
@@ -272,14 +272,34 @@ startsSending:(BOOL)startsSending
                           sendingParameters:[sendingParameters copy]];
 }
 
-- (void)sendNextI:(ADJPackageHandler *)selfI {
+- (void)sendNextI:(ADJPackageHandler *)selfI
+    previousResponseContinueIn:(NSNumber *)previousResponseContinueIn
+{
     if ([selfI.packageQueue count] > 0) {
         [selfI.packageQueue removeObjectAtIndex:0];
         [selfI writePackageQueueS:selfI];
     }
 
-    dispatch_semaphore_signal(selfI.sendingSemaphore);
-    [selfI sendFirstI:selfI];
+    // if previous response contained continue_in
+    // delay for that time
+    if (previousResponseContinueIn != nil) {
+        NSTimeInterval waitTime = [previousResponseContinueIn intValue] / 1000.0;
+
+        [self.logger verbose:
+         @"Waiting for %@ seconds before continuing for next package in continue_in",
+         [ADJUtil secondsNumberFormat:waitTime]];
+
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(waitTime * NSEC_PER_SEC)),
+                       self.internalQueue, ^{
+            [self.logger verbose:@"Package handler finished waiting to continue"];
+            dispatch_semaphore_signal(self.sendingSemaphore);
+            [self sendFirstPackage];
+        });
+    } else {
+        // otherwise just signal and send next
+        dispatch_semaphore_signal(selfI.sendingSemaphore);
+        [selfI sendFirstI:selfI];
+    }
 }
 
 - (void)updatePackagesI:(ADJPackageHandler *)selfI
