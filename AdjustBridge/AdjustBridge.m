@@ -315,6 +315,7 @@
         NSString *revenue = [data objectForKey:@"revenue"];
         NSString *currency = [data objectForKey:@"currency"];
         NSString *transactionId = [data objectForKey:@"transactionId"];
+        NSString *deduplicationId = [data objectForKey:@"deduplicationId"];
         id callbackParameters = [data objectForKey:@"callbackParameters"];
         id partnerParameters = [data objectForKey:@"partnerParameters"];
         NSString *callbackId = [data objectForKey:@"callbackId"];
@@ -331,6 +332,9 @@
         }
         if ([self isFieldValid:transactionId]) {
             [adjustEvent setTransactionId:transactionId];
+        }
+        if ([self isFieldValid:deduplicationId]) {
+            [adjustEvent setDeduplicationId:deduplicationId];
         }
         for (int i = 0; i < [callbackParameters count]; i += 2) {
             NSString *key = [[callbackParameters objectAtIndex:i] description];
