@@ -205,6 +205,7 @@
         NSString *urlStrategy = [data objectForKey:@"urlStrategy"];
         NSNumber *readDeviceInfoOnceEnabled = [data objectForKey:@"readDeviceInfoOnceEnabled"];
         NSNumber *attConsentWaitingSeconds = [data objectForKey:@"attConsentWaitingSeconds"];
+        NSNumber *eventDeduplicationIdsMaxSize = [data objectForKey:@"eventDeduplicationIdsMaxSize"];
 
         ADJConfig *adjustConfig;
         if ([self isFieldValid:allowSuppressLogLevel]) {
@@ -304,6 +305,9 @@
         }
         if ([self isFieldValid:readDeviceInfoOnceEnabled]) {
             [adjustConfig setReadDeviceInfoOnceEnabled:[readDeviceInfoOnceEnabled boolValue]];
+        }
+        if ([self isFieldValid:eventDeduplicationIdsMaxSize]) {
+            [adjustConfig setEventDeduplicationIdsMaxSize:[eventDeduplicationIdsMaxSize integerValue]];
         }
 
         [Adjust appDidLaunch:adjustConfig];
