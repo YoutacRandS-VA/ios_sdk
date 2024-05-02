@@ -93,7 +93,8 @@
                    forActivityKind:(ADJActivityKind)activityKind
                      withAttStatus:(NSString * _Nullable)attStatusString
                      configuration:(ADJConfig * _Nullable)adjConfig
-                     packageParams:(ADJPackageParams * _Nullable)packageParams;
+                     packageParams:(ADJPackageParams * _Nullable)packageParams
+                     activityState:(ADJActivityState *_Nullable)activityState;
 
 + (void)removeConsentDataFromParameters:(nonnull NSMutableDictionary *)parameters;
 
