@@ -380,6 +380,11 @@
         [adjustConfig setAttConsentWaitingInterval:[attConsentWaitingSecondsS intValue]];
     }
 
+    if ([parameters objectForKey:@"eventDeduplicationIdsMaxSize"]) {
+        NSString *eventDeduplicationIdsMaxSizeS = [parameters objectForKey:@"eventDeduplicationIdsMaxSize"][0];
+        [adjustConfig setEventDeduplicationIdsMaxSize:[eventDeduplicationIdsMaxSizeS intValue]];
+    }
+
     [adjustConfig setDelegate:self.adjustDelegate];
 }
 
@@ -482,6 +487,14 @@
             transactionId = nil;
         }
         [adjustEvent setTransactionId:transactionId];
+    }
+
+    if ([parameters objectForKey:@"deduplicationId"]) {
+        NSString *deduplicationId = [parameters objectForKey:@"deduplicationId"][0];
+        if (deduplicationId == (id)[NSNull null]) {
+            deduplicationId = nil;
+        }
+        [adjustEvent setDeduplicationId:deduplicationId];
     }
 
     if ([parameters objectForKey:@"receipt"]) {

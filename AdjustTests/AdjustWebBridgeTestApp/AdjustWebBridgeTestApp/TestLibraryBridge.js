@@ -271,6 +271,12 @@ AdjustCommandExecutor.prototype.config = function(params) {
         adjustConfig.setAttConsentWaitingInterval(attConsentWaitingSeconds);
     }
 
+    if ('eventDeduplicationIdsMaxSize' in params) {
+        var eventDeduplicationIdsMaxSizeS = getFirstValue(params, 'eventDeduplicationIdsMaxSize');
+        var eventDeduplicationIdsMaxSize = parseFloat(eventDeduplicationIdsMaxSizeS);
+        adjustConfig.setEventDeduplicationIdsMaxSize(eventDeduplicationIdsMaxSize);
+    }
+
     if ('attributionCallbackSendAll' in params) {
         console.log('AdjustCommandExecutor.prototype.config attributionCallbackSendAll');
         var extraPath = this.extraPath;
@@ -447,6 +453,11 @@ AdjustCommandExecutor.prototype.event = function(params) {
     if ('callbackId' in params) {
         var callbackId = getFirstValue(params, 'callbackId');
         adjustEvent.setCallbackId(callbackId);
+    }
+
+    if ('deduplicationId' in params) {
+        var deduplicationId = getFirstValue(params, 'deduplicationId');
+        adjustEvent.setDedupliationId(deduplicationId);
     }
 };
 

@@ -286,6 +286,7 @@ static NSString * fbAppIdStatic = nil;
             this.revenue = null;
             this.currency = null;
             this.transactionId = null;
+            this.deduplicationId = null;
             this.callbackId = null;
             this.callbackParameters = [];
             this.partnerParameters = [];
@@ -305,6 +306,9 @@ static NSString * fbAppIdStatic = nil;
         };
         AdjustEvent.prototype.setTransactionId = function(transactionId) {
             this.transactionId = transactionId;
+        };
+        AdjustEvent.prototype.setDeduplicationId = function(deduplicationId) {
+            this.deduplicationId = deduplicationId;
         };
         AdjustEvent.prototype.setCallbackId = function(callbackId) {
             this.callbackId = callbackId;
@@ -370,6 +374,7 @@ static NSString * fbAppIdStatic = nil;
             this.urlStrategy = null;
             this.readDeviceInfoOnceEnabled = null;
             this.attConsentWaitingSeconds = null;
+            this.eventDeduplicationIdsMaxSize = null;
         };
 
         AdjustConfig.EnvironmentSandbox = 'sandbox';
@@ -480,6 +485,9 @@ static NSString * fbAppIdStatic = nil;
         };
         AdjustConfig.prototype.setAttConsentWaitingInterval = function(attConsentWaitingSeconds) {
             this.attConsentWaitingSeconds = attConsentWaitingSeconds;
+        };
+        AdjustConfig.prototype.setEventDeduplicationIdsMaxSize = function(eventDeduplicationIdsMaxSize) {
+            this.eventDeduplicationIdsMaxSize = eventDeduplicationIdsMaxSize;
         };
     })();); // END preprocessorJSCode
     //, augmentedSection];
