@@ -119,6 +119,7 @@ const BOOL kSkanRegisterLockWindow = NO;
 @property (nonatomic, copy) NSString* subscriptionPath;
 @property (nonatomic, copy) NSString* purchaseVerificationPath;
 @property (nonatomic, copy) AdjustResolvedDeeplinkBlock cachedDeeplinkResolutionCallback;
+@property (nonatomic, copy) ADJAttribution *attribution;
 
 - (void)prepareDeeplinkI:(ADJActivityHandler *_Nullable)selfI
             responseData:(ADJAttributionResponseData *_Nullable)attributionResponseData NS_EXTENSION_UNAVAILABLE_IOS("");
@@ -128,7 +129,6 @@ const BOOL kSkanRegisterLockWindow = NO;
 #pragma mark -
 @implementation ADJActivityHandler
 
-@synthesize attribution = _attribution;
 @synthesize trackingStatusManager = _trackingStatusManager;
 
 - (id)initWithConfig:(ADJConfig *_Nullable)adjustConfig
@@ -678,6 +678,27 @@ const BOOL kSkanRegisterLockWindow = NO;
     }];
 }
 
+- (void)attributionWithCallback:(nonnull id<ADJAdjustAttributionCallback>)attributionCallback {
+    __block ADJAttribution *_Nullable localAttribution = self.attribution;
+
+    if (localAttribution == nil) {
+        if (self.savedPreLaunch.cachedAttributionReadCallbacksArray == nil) {
+            self.savedPreLaunch.cachedAttributionReadCallbacksArray = [NSMutableArray array];
+        }
+
+        [self.savedPreLaunch.cachedAttributionReadCallbacksArray addObject:attributionCallback];
+
+        return;
+    }
+
+    __block id<ADJAdjustAttributionCallback>_Nonnull localAttributionCallback =
+        attributionCallback;
+
+    [ADJUtil launchInMainThread:^{
+        [localAttributionCallback didReadWithAdjustAttribution:localAttribution];
+    }];
+}
+
 - (void)writeActivityState {
     [ADJUtil launchInQueue:self.internalQueue
                 selfInject:self
@@ -933,6 +954,8 @@ preLaunchActions:(ADJSavedPreLaunch*)preLaunchActions
 
     [selfI preLaunchActionsI:selfI
        preLaunchActionsArray:preLaunchActions.preLaunchActionsArray];
+
+    [selfI processCachedAttributionReadCallback];
 
     [ADJUtil launchInMainThreadWithInactive:^(BOOL isInactive) {
         [ADJUtil launchInQueue:self.internalQueue selfInject:self block:^(ADJActivityHandler * selfI) {
@@ -1580,6 +1603,8 @@ preLaunchActions:(ADJSavedPreLaunch*)preLaunchActions
     selfI.attribution = attribution;
     [selfI writeAttributionI:selfI];
 
+    [selfI processCachedAttributionReadCallback];
+
     if (selfI.adjustDelegate == nil) {
         return NO;
     }
@@ -1589,6 +1614,26 @@ preLaunchActions:(ADJSavedPreLaunch*)preLaunchActions
     }
 
     return YES;
+}
+
+- (void)processCachedAttributionReadCallback {
+    __block ADJAttribution *_Nullable localAttribution = self.attribution;
+    if (localAttribution == nil) {
+        return;
+    }
+    if (self.savedPreLaunch.cachedAttributionReadCallbacksArray == nil) {
+        return;
+    }
+
+    for (id<ADJAdjustAttributionCallback> attributionCallback in
+         self.savedPreLaunch.cachedAttributionReadCallbacksArray)
+    {
+        [ADJUtil launchInMainThread:^{
+            [attributionCallback didReadWithAdjustAttribution:localAttribution];
+        }];
+    }
+
+    [self.savedPreLaunch.cachedAttributionReadCallbacksArray removeAllObjects];
 }
 
 - (void)setEnabledI:(ADJActivityHandler *)selfI enabled:(BOOL)enabled {

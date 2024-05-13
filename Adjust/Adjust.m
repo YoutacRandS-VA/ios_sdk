@@ -287,9 +287,9 @@ static dispatch_once_t onceToken = 0;
     }
 }
 
-+ (ADJAttribution *)attribution {
++ (void)attributionWithCallback:(nonnull id<ADJAdjustAttributionCallback>)attributionCallback {
     @synchronized (self) {
-        return [[Adjust getInstance] attribution];
+        [[Adjust getInstance] attributionWithCallback:attributionCallback];
     }
 }
 
@@ -486,7 +486,6 @@ static dispatch_once_t onceToken = 0;
     [self.savedPreLaunch.preLaunchActionsArray addObject:^(ADJActivityHandler *activityHandler) {
         [activityHandler addGlobalPartnerParameterI:activityHandler param:param forKey:key];
     }];
-
 }
 
 - (void)removeGlobalCallbackParameterForKey:(nonnull NSString *)key {
@@ -633,11 +632,21 @@ static dispatch_once_t onceToken = 0;
     [self.activityHandler trackAdRevenue:adRevenue];
 }
 
-- (ADJAttribution *)attribution {
-    if (![self checkActivityHandler]) {
-        return nil;
+- (void)attributionWithCallback:(nonnull id<ADJAdjustAttributionCallback>)attributionCallback {
+    if (attributionCallback == nil) {
+        [self.logger error:@"Callback for getting attribution can't be null"];
+        return;
     }
-    return [self.activityHandler attribution];
+
+    if (![self checkActivityHandler]) {
+        if (self.savedPreLaunch.cachedAttributionReadCallbacksArray == nil) {
+            self.savedPreLaunch.cachedAttributionReadCallbacksArray = [NSMutableArray array];
+        }
+
+        [self.savedPreLaunch.cachedAttributionReadCallbacksArray addObject:attributionCallback];
+        return;
+    }
+    return [self.activityHandler attributionWithCallback:attributionCallback];
 }
 
 - (NSString *)adid {
