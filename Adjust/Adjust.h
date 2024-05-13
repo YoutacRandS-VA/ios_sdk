@@ -288,11 +288,11 @@ extern NSString * __nonnull const ADJDataResidencyUS;
 + (void)trackSubscription:(nonnull ADJSubscription *)subscription;
 
 /**
- * @brief Adjust wrapper for requestTrackingAuthorizationWithCompletionHandler: method.
+ * @brief Adjust wrapper for requestTrackingAuthorizationWithCompletionHandler: method of ATTrackingManager.
  *
  * @param completion Block which value of tracking authorization status will be delivered to.
  */
-+ (void)requestTrackingAuthorizationWithCompletionHandler:(void (^_Nullable)(NSUInteger status))completion;
++ (void)requestAppTrackingAuthorizationWithCompletionHandler:(void (^_Nullable)(NSUInteger status))completion;
 
 /**
  * @brief Getter for app tracking authorization status.
@@ -425,7 +425,7 @@ extern NSString * __nonnull const ADJDataResidencyUS;
 
 - (nullable NSURL *)convertUniversalLink:(nonnull NSURL *)url withScheme:(nonnull NSString *)scheme;
 
-- (void)requestTrackingAuthorizationWithCompletionHandler:(void (^_Nullable)(NSUInteger status))completion;
+- (void)requestAppTrackingAuthorizationWithCompletionHandler:(void (^_Nullable)(NSUInteger status))completion;
 
 - (int)appTrackingAuthorizationStatus;
 
