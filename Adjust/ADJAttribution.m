@@ -13,13 +13,11 @@
 
 @implementation ADJAttribution
 
-+ (ADJAttribution *)dataWithJsonDict:(NSDictionary *)jsonDict
-                                adid:(NSString *)adid {
-    return [[ADJAttribution alloc] initWithJsonDict:jsonDict adid:adid];
++ (ADJAttribution *)dataWithJsonDict:(NSDictionary *)jsonDict {
+    return [[ADJAttribution alloc] initWithJsonDict:jsonDict];
 }
 
-- (id)initWithJsonDict:(NSDictionary *)jsonDict
-                  adid:(NSString *)adid {
+- (id)initWithJsonDict:(NSDictionary *)jsonDict {
     self = [super init];
     if (self == nil) {
         return nil;
@@ -35,7 +33,6 @@
     self.adgroup = [jsonDict objectForKey:@"adgroup"];
     self.creative = [jsonDict objectForKey:@"creative"];
     self.clickLabel = [jsonDict objectForKey:@"click_label"];
-    self.adid = adid;
     self.costType = [jsonDict objectForKey:@"cost_type"];
     self.costAmount = [jsonDict objectForKey:@"cost_amount"];
     self.costCurrency = [jsonDict objectForKey:@"cost_currency"];
@@ -66,9 +63,6 @@
         return NO;
     }
     if (![NSString adjIsEqual:self.clickLabel toString:attribution.clickLabel]) {
-        return NO;
-    }
-    if (![NSString adjIsEqual:self.adid toString:attribution.adid]) {
         return NO;
     }
     if (![NSString adjIsEqual:self.costType toString:attribution.costType]) {
@@ -108,9 +102,6 @@
     if (self.clickLabel != nil) {
         [responseDataDic setObject:self.clickLabel forKey:@"click_label"];
     }
-    if (self.adid != nil) {
-        [responseDataDic setObject:self.adid forKey:@"adid"];
-    }
     if (self.costType != nil) {
         [responseDataDic setObject:self.costType forKey:@"costType"];
     }
@@ -125,9 +116,9 @@
 }
 
 - (NSString *)description {
-    return [NSString stringWithFormat:@"tt:%@ tn:%@ net:%@ cam:%@ adg:%@ cre:%@ cl:%@ adid:%@ ct:%@ ca:%@ cc:%@",
+    return [NSString stringWithFormat:@"tt:%@ tn:%@ net:%@ cam:%@ adg:%@ cre:%@ cl:%@ ct:%@ ca:%@ cc:%@",
             self.trackerToken, self.trackerName, self.network, self.campaign,
-            self.adgroup, self.creative, self.clickLabel, self.adid, self.costType,
+            self.adgroup, self.creative, self.clickLabel, self.costType,
             self.costAmount, self.costCurrency];
 }
 
@@ -162,7 +153,6 @@
         copy.adgroup = [self.adgroup copyWithZone:zone];
         copy.creative = [self.creative copyWithZone:zone];
         copy.clickLabel = [self.clickLabel copyWithZone:zone];
-        copy.adid = [self.adid copyWithZone:zone];
         copy.costType = [self.costType copyWithZone:zone];
         copy.costAmount = [self.costAmount copyWithZone:zone];
         copy.costCurrency = [self.costCurrency copyWithZone:zone];
@@ -187,7 +177,6 @@
     self.adgroup = [decoder decodeObjectForKey:@"adgroup"];
     self.creative = [decoder decodeObjectForKey:@"creative"];
     self.clickLabel = [decoder decodeObjectForKey:@"click_label"];
-    self.adid = [decoder decodeObjectForKey:@"adid"];
     self.costType = [decoder decodeObjectForKey:@"costType"];
     self.costAmount = [decoder decodeObjectForKey:@"costAmount"];
     self.costCurrency = [decoder decodeObjectForKey:@"costCurrency"];
@@ -203,7 +192,6 @@
     [encoder encodeObject:self.adgroup forKey:@"adgroup"];
     [encoder encodeObject:self.creative forKey:@"creative"];
     [encoder encodeObject:self.clickLabel forKey:@"click_label"];
-    [encoder encodeObject:self.adid forKey:@"adid"];
     [encoder encodeObject:self.costType forKey:@"costType"];
     [encoder encodeObject:self.costAmount forKey:@"costAmount"];
     [encoder encodeObject:self.costCurrency forKey:@"costCurrency"];
