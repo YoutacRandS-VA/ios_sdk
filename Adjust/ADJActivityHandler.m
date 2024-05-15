@@ -183,7 +183,7 @@ const BOOL kSkanRegisterLockWindow = NO;
     [self readActivityState];
     
     // register SKAdNetwork attribution if we haven't already
-    if (self.adjustConfig.isSKANAttributionHandlingEnabled) {
+    if (self.adjustConfig.isSkanAttributionHandlingEnabled) {
         NSNumber *numConversionValue = [NSNumber numberWithInteger:kSkanRegisterConversionValue];
         NSNumber *numLockWindow = [NSNumber numberWithBool:kSkanRegisterLockWindow];
 
@@ -2763,7 +2763,7 @@ sdkClickHandlerOnly:(BOOL)sdkClickHandlerOnly
 }
 
 - (void)checkConversionValue:(ADJResponseData *)responseData {
-    if (!self.adjustConfig.isSKANAttributionHandlingEnabled) {
+    if (!self.adjustConfig.isSkanAttributionHandlingEnabled) {
         return;
     }
     if (responseData.jsonResponse == nil) {
