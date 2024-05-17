@@ -844,9 +844,9 @@ preLaunchActions:(ADJSavedPreLaunch*)preLaunchActions
     [ADJUtil updateUrlSessionConfiguration:selfI.adjustConfig];
 
     ADJUrlStrategy *packageHandlerUrlStrategy =
-        [[ADJUrlStrategy alloc]
-             initWithUrlStrategyInfo:selfI.adjustConfig.urlStrategy
-             extraPath:preLaunchActions.extraPath];
+    [[ADJUrlStrategy alloc] initWithUrlStrategyDomains:selfI.adjustConfig.urlStrategyDomains
+                                             extraPath:preLaunchActions.extraPath
+                                         useSubdomains:selfI.adjustConfig.useSubdomains];
 
     selfI.packageHandler = [[ADJPackageHandler alloc]
                                 initWithActivityHandler:selfI
@@ -855,9 +855,9 @@ preLaunchActions:(ADJSavedPreLaunch*)preLaunchActions
                                 urlStrategy:packageHandlerUrlStrategy];
 
     ADJUrlStrategy *attributionHandlerUrlStrategy =
-        [[ADJUrlStrategy alloc]
-             initWithUrlStrategyInfo:selfI.adjustConfig.urlStrategy
-             extraPath:preLaunchActions.extraPath];
+    [[ADJUrlStrategy alloc] initWithUrlStrategyDomains:selfI.adjustConfig.urlStrategyDomains
+                                             extraPath:preLaunchActions.extraPath
+                                         useSubdomains:selfI.adjustConfig.useSubdomains];
 
     selfI.attributionHandler = [[ADJAttributionHandler alloc]
                                     initWithActivityHandler:selfI
@@ -866,9 +866,9 @@ preLaunchActions:(ADJSavedPreLaunch*)preLaunchActions
                                     urlStrategy:attributionHandlerUrlStrategy];
 
     ADJUrlStrategy *sdkClickHandlerUrlStrategy =
-        [[ADJUrlStrategy alloc]
-             initWithUrlStrategyInfo:selfI.adjustConfig.urlStrategy
-             extraPath:preLaunchActions.extraPath];
+    [[ADJUrlStrategy alloc] initWithUrlStrategyDomains:selfI.adjustConfig.urlStrategyDomains
+                                             extraPath:preLaunchActions.extraPath
+                                         useSubdomains:selfI.adjustConfig.useSubdomains];
 
     selfI.sdkClickHandler = [[ADJSdkClickHandler alloc]
                              initWithActivityHandler:selfI
@@ -1310,12 +1310,13 @@ preLaunchActions:(ADJSavedPreLaunch*)preLaunchActions
 - (void)verifyPurchaseI:(ADJActivityHandler *)selfI
                purchase:(nonnull ADJPurchase *)purchase
       completionHandler:(void (^_Nonnull)(ADJPurchaseVerificationResult * _Nonnull verificationResult))completionHandler {
-    if ([selfI.adjustConfig.urlStrategy isEqualToString:ADJDataResidencyEU] ||
-        [selfI.adjustConfig.urlStrategy isEqualToString:ADJDataResidencyUS] ||
-        [selfI.adjustConfig.urlStrategy isEqualToString:ADJDataResidencyTR]) {
-        [selfI.logger warn:@"Purchase verification not available for data residency users right now"];
-        return;
-    }
+    // TODO: to be handled
+    // if ([selfI.adjustConfig.urlStrategy isEqualToString:ADJDataResidencyEU] ||
+    //     [selfI.adjustConfig.urlStrategy isEqualToString:ADJDataResidencyUS] ||
+    //     [selfI.adjustConfig.urlStrategy isEqualToString:ADJDataResidencyTR]) {
+    //     [selfI.logger warn:@"Purchase verification not available for data residency users right now"];
+    //     return;
+    // }
     if (![selfI isEnabledI:selfI]) {
         [selfI.logger warn:@"Purchase verification aborted because SDK is disabled"];
         return;
