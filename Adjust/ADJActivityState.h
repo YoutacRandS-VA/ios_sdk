@@ -14,7 +14,6 @@
 @property (nonatomic, assign) BOOL enabled;
 @property (nonatomic, assign) BOOL isGdprForgotten;
 @property (nonatomic, assign) BOOL askingAttribution;
-@property (nonatomic, assign) BOOL isThirdPartySharingDisabled;
 @property (nonatomic, assign) BOOL isThirdPartySharingDisabledForCoppa;
 
 @property (nonatomic, copy) NSString *dedupeToken;
@@ -54,5 +53,8 @@
 - (BOOL)eventDeduplicationIdExists:(NSString *)deduplicationId;
 - (void)addEventDeduplicationId:(NSString *)deduplicationId;
 
+
+- (BOOL)isCoppaComplianceEnabled;
+- (void)setCoppaComplianceWithIsEnabled:(BOOL)isCoppaComplianceEnabled;
 
 @end
