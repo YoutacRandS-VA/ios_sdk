@@ -82,11 +82,11 @@
 - (BOOL)isEnabled;
 - (BOOL)isGdprForgotten;
 
-- (void)appWillOpenUrl:(NSURL * _Nullable)url
-         withClickTime:(NSDate * _Nullable)clickTime;
 - (void)processDeeplink:(NSURL * _Nullable)deeplink
-              clickTime:(NSDate * _Nullable)clickTime
-      completionHandler:(AdjustResolvedDeeplinkBlock _Nullable)completionHandler;
+          withClickTime:(NSDate * _Nullable)clickTime;
+- (void)processAndResolveDeeplink:(NSURL * _Nullable)deeplink
+                        clickTime:(NSDate * _Nullable)clickTime
+                completionHandler:(AdjustResolvedDeeplinkBlock _Nullable)completionHandler;
 - (void)setDeviceToken:(NSData * _Nullable)deviceToken;
 - (void)setPushToken:(NSString * _Nullable)deviceToken;
 - (void)setGdprForgetMe;

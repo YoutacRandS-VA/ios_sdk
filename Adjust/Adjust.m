@@ -112,16 +112,16 @@ static dispatch_once_t onceToken = 0;
     }
 }
 
-+ (void)appWillOpenUrl:(NSURL *)url {
++ (void)processDeeplink:(NSURL *)deeplink {
     @synchronized (self) {
-        [[Adjust getInstance] appWillOpenUrl:[url copy]];
+        [[Adjust getInstance] processDeeplink:[deeplink copy]];
     }
 }
 
-+ (void)processDeeplink:(nonnull NSURL *)deeplink
-      completionHandler:(void (^_Nonnull)(NSString * _Nonnull resolvedLink))completionHandler {
++ (void)processAndResolveDeeplink:(nonnull NSURL *)deeplink
+                completionHandler:(void (^_Nonnull)(NSString * _Nonnull resolvedLink))completionHandler {
     @synchronized (self) {
-        [[Adjust getInstance] processDeeplink:deeplink completionHandler:completionHandler];
+        [[Adjust getInstance] processAndResolveDeeplink:deeplink completionHandler:completionHandler];
     }
 }
 
@@ -360,21 +360,21 @@ static dispatch_once_t onceToken = 0;
     return [self.activityHandler isEnabled];
 }
 
-- (void)appWillOpenUrl:(NSURL *)url {
-    [ADJUserDefaults cacheDeeplinkUrl:url];
+- (void)processDeeplink:(NSURL *)deeplink {
+    [ADJUserDefaults cacheDeeplinkUrl:deeplink];
     NSDate *clickTime = [NSDate date];
     if (![self checkActivityHandler]) {
-        [ADJUserDefaults saveDeeplinkUrl:url andClickTime:clickTime];
+        [ADJUserDefaults saveDeeplinkUrl:deeplink andClickTime:clickTime];
         return;
     }
-    [self.activityHandler appWillOpenUrl:url withClickTime:clickTime];
+    [self.activityHandler processDeeplink:deeplink withClickTime:clickTime];
 }
 
-- (void)processDeeplink:(nonnull NSURL *)deeplink
-      completionHandler:(void (^_Nonnull)(NSString * _Nonnull resolvedLink))completionHandler {
+- (void)processAndResolveDeeplink:(nonnull NSURL *)deeplink
+                completionHandler:(void (^_Nonnull)(NSString * _Nonnull resolvedLink))completionHandler {
     // if resolution result is not wanted, fallback to default method
     if (completionHandler == nil) {
-        [self appWillOpenUrl:deeplink];
+        [self processDeeplink:deeplink];
         return;
     }
     // if deep link processing is triggered prior to SDK being initialized
@@ -386,9 +386,9 @@ static dispatch_once_t onceToken = 0;
         return;
     }
     // if deep link processing was triggered with SDK being initialized
-    [self.activityHandler processDeeplink:deeplink
-                                clickTime:clickTime
-                        completionHandler:completionHandler];
+    [self.activityHandler processAndResolveDeeplink:deeplink
+                                          clickTime:clickTime
+                                  completionHandler:completionHandler];
 }
 
 - (void)setDeviceToken:(NSData *)deviceToken {
