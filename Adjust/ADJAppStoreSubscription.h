@@ -1,5 +1,5 @@
 //
-//  ADJSubscription.h
+//  ADJAppStoreSubscription.h
 //  Adjust
 //
 //  Created by Uglješa Erceg on 16.04.20.
@@ -8,7 +8,7 @@
 
 #import <Foundation/Foundation.h>
 
-@interface ADJSubscription : NSObject<NSCopying>
+@interface ADJAppStoreSubscription : NSObject<NSCopying>
 
 @property (nonatomic, copy, readonly, nonnull) NSDecimalNumber *price;  // [M] revenue
 
@@ -17,8 +17,6 @@
 @property (nonatomic, copy, readonly, nonnull) NSString *transactionId; // [M] transaction_id
 
 @property (nonatomic, copy, readonly, nonnull) NSData *receipt;         // [M] receipt
-
-@property (nonatomic, copy, readonly, nonnull) NSString *billingStore;  // [M] billing_store
 
 @property (nonatomic, copy, readonly, nonnull) NSDate *transactionDate; // [O] transaction_date
 

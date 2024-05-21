@@ -1,5 +1,5 @@
 //
-//  ADJSubscription.m
+//  ADJAppStoreSubscription.m
 //  Adjust
 //
 //  Created by Uglješa Erceg on 16.04.20.
@@ -7,10 +7,10 @@
 //
 
 #import "ADJUtil.h"
-#import "ADJSubscription.h"
+#import "ADJAppStoreSubscription.h"
 #import "ADJAdjustFactory.h"
 
-@interface ADJSubscription()
+@interface ADJAppStoreSubscription()
 
 @property (nonatomic, weak) id<ADJLogger> logger;
 
@@ -20,7 +20,7 @@
 
 @end
 
-@implementation ADJSubscription
+@implementation ADJAppStoreSubscription
 
 - (nullable id)initWithPrice:(nonnull NSDecimalNumber *)price
                     currency:(nonnull NSString *)currency
@@ -35,7 +35,6 @@
     _currency = [currency copy];
     _transactionId = [transactionId copy];
     _receipt = [receipt copy];
-    _billingStore = @"iOS";
 
     _logger = ADJAdjustFactory.logger;
     
@@ -123,14 +122,13 @@
 }
 
 - (id)copyWithZone:(NSZone *)zone {
-    ADJSubscription *copy = [[[self class] allocWithZone:zone] init];
+    ADJAppStoreSubscription *copy = [[[self class] allocWithZone:zone] init];
 
     if (copy) {
         copy->_price = [self.price copyWithZone:zone];
         copy->_currency = [self.currency copyWithZone:zone];
         copy->_transactionId = [self.transactionId copyWithZone:zone];
         copy->_receipt = [self.receipt copyWithZone:zone];
-        copy->_billingStore = [self.billingStore copyWithZone:zone];
         copy->_transactionDate = [self.transactionDate copyWithZone:zone];
         copy->_salesRegion = [self.salesRegion copyWithZone:zone];
         copy.mutableCallbackParameters = [self.mutableCallbackParameters copyWithZone:zone];
