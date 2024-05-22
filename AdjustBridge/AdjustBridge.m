@@ -30,7 +30,33 @@
 
 @end
 
-@interface ADJAttributionGetter : NSObject<ADJAdjustAttributionCallback>
+@interface ADJAttributionGetter : NSObject<ADJAttributionCallback>
+
+@property (nonatomic, strong) WVJBResponseCallback callback;
+
+@end
+
+@interface ADJIdfaGetter : NSObject<ADJIdfaCallback>
+
+@property (nonatomic, strong) WVJBResponseCallback callback;
+
+@end
+
+@interface ADJIdfvGetter : NSObject<ADJIdfvCallback>
+
+@property (nonatomic, strong) WVJBResponseCallback callback;
+
+@end
+
+@interface ADJSdkVersionGetter : NSObject<ADJSdkVersionCallback>
+
+@property (nonatomic, copy) NSString *sdkPrefix;
+
+@property (nonatomic, strong) WVJBResponseCallback callback;
+
+@end
+
+@interface ADJLastDeeplinkGetter : NSObject<ADJLastDeeplinkCallback>
 
 @property (nonatomic, strong) WVJBResponseCallback callback;
 
@@ -401,23 +427,30 @@
             return;
         }
 
-        NSString *sdkPrefix = (NSString *)data;
-        NSString *sdkVersion = [NSString stringWithFormat:@"%@@%@", sdkPrefix, [Adjust sdkVersion]];
-        responseCallback(sdkVersion);
+        ADJSdkVersionGetter * _Nonnull sdkVersionGetter = [[ADJSdkVersionGetter alloc] init];
+        sdkVersionGetter.sdkPrefix = (NSString *)data;
+        sdkVersionGetter.callback = responseCallback;
+        [Adjust sdkVersionWithCallback:sdkVersionGetter];
     }];
 
     [self.bridgeRegister registerHandler:@"adjust_idfa" handler:^(id data, WVJBResponseCallback responseCallback) {
         if (responseCallback == nil) {
             return;
         }
-        responseCallback([Adjust idfa]);
+
+        ADJIdfaGetter * _Nonnull idfaGetter = [[ADJIdfaGetter alloc] init];
+        idfaGetter.callback = responseCallback;
+        [Adjust idfaWithCallback:idfaGetter];
     }];
 
     [self.bridgeRegister registerHandler:@"adjust_idfv" handler:^(id data, WVJBResponseCallback responseCallback) {
         if (responseCallback == nil) {
             return;
         }
-        responseCallback([Adjust idfv]);
+
+        ADJIdfvGetter * _Nonnull idfvGetter = [[ADJIdfvGetter alloc] init];
+        idfvGetter.callback = responseCallback;
+        [Adjust idfvWithCallback:idfvGetter];
     }];
 
     [self.bridgeRegister registerHandler:@"adjust_requestAppTrackingAuthorizationWithCompletionHandler" handler:^(id data, WVJBResponseCallback responseCallback) {
@@ -546,8 +579,10 @@
         if (responseCallback == nil) {
             return;
         }
-        NSURL *lastDeeplink = [Adjust lastDeeplink];
-        responseCallback(lastDeeplink != nil ? [lastDeeplink absoluteString] : nil);
+
+        ADJLastDeeplinkGetter * _Nonnull lastDeeplinkGetter = [[ADJLastDeeplinkGetter alloc] init];
+        lastDeeplinkGetter.callback = responseCallback;
+        [Adjust lastDeeplinkWithCallback:lastDeeplinkGetter];
     }];
 
     [self.bridgeRegister registerHandler:@"adjust_enableCoppaCompliance"
@@ -743,6 +778,47 @@
     }
 
     self.callback(attributionDictionary);
+}
+
+@end
+
+#pragma mark - ADJIdfaCallback protocol
+
+@implementation ADJIdfaGetter
+
+- (void)didReadWithIdfa:(nullable NSString *)idfa {
+    self.callback(idfa);
+}
+
+@end
+
+#pragma mark - ADJIdfvCallback protocol
+
+@implementation ADJIdfvGetter
+
+- (void)didReadWithIdfv:(nullable NSString *)idfv {
+    self.callback(idfv);
+}
+
+@end
+
+#pragma mark - ADJSdkVersionCallback protocol
+
+@implementation ADJSdkVersionGetter
+
+- (void)didReadWithSdkVersion:(NSString *)sdkVersion {
+    NSString *joinedSdkVersion = [NSString stringWithFormat:@"%@@%@", self.sdkPrefix, sdkVersion];
+    self.callback(joinedSdkVersion);
+}
+
+@end
+
+#pragma mark - ADJLastDeeplinkCallback protocol
+
+@implementation ADJLastDeeplinkGetter
+
+- (void)didReadWithLastDeeplink:(NSURL *)lastDeeplink {
+    self.callback(lastDeeplink != nil ? [lastDeeplink absoluteString] : nil);
 }
 
 @end

@@ -143,21 +143,21 @@ static dispatch_once_t onceToken = 0;
     }
 }
 
-+ (NSString *)idfa {
++ (void)idfaWithCallback:(nonnull id<ADJIdfaCallback>)idfaCallback {
     @synchronized (self) {
-        return [[Adjust getInstance] idfa];
+        [[Adjust getInstance] idfaWithCallback:idfaCallback];
     }
 }
 
-+ (NSString *)idfv {
++ (void)idfvWithCallback:(nonnull id<ADJIdfvCallback>)idfvCallback {
     @synchronized (self) {
-        return [[Adjust getInstance] idfv];
+        [[Adjust getInstance] idfvWithCallback:idfvCallback];
     }
 }
 
-+ (NSString *)sdkVersion {
++ (void)sdkVersionWithCallback:(nonnull id<ADJSdkVersionCallback>)sdkVersionCallback {
     @synchronized (self) {
-        return [[Adjust getInstance] sdkVersion];
+        [[Adjust getInstance] sdkVersionWithCallback:sdkVersionCallback];
     }
 }
 
@@ -257,7 +257,7 @@ static dispatch_once_t onceToken = 0;
     }
 }
 
-+ (void)attributionWithCallback:(nonnull id<ADJAdjustAttributionCallback>)attributionCallback {
++ (void)attributionWithCallback:(nonnull id<ADJAttributionCallback>)attributionCallback {
     @synchronized (self) {
         [[Adjust getInstance] attributionWithCallback:attributionCallback];
     }
@@ -269,9 +269,9 @@ static dispatch_once_t onceToken = 0;
     }
 }
 
-+ (NSURL *)lastDeeplink {
++ (void)lastDeeplinkWithCallback:(nonnull id<ADJLastDeeplinkCallback>)lastDeeplinkCallback {
     @synchronized (self) {
-        return [[Adjust getInstance] lastDeeplink];
+        [[Adjust getInstance] lastDeeplinkWithCallback:lastDeeplinkCallback];
     }
 }
 
@@ -415,12 +415,28 @@ static dispatch_once_t onceToken = 0;
     }
 }
 
-- (NSString *)idfa {
-    return [ADJUtil idfa];
+- (void)idfaWithCallback:(nonnull id<ADJIdfaCallback>)idfaCallback {
+    if (idfaCallback == nil) {
+        [self.logger error:@"Callback for getting IDFA can't be null"];
+        return;
+    }
+
+    NSString *idfa = [ADJUtil idfa];
+    [ADJUtil launchInMainThread:^{
+        [idfaCallback didReadWithIdfa:idfa];
+    }];
 }
 
-- (NSString *)idfv {
-    return [ADJUtil idfv];
+- (void)idfvWithCallback:(nonnull id<ADJIdfvCallback>)idfvCallback {
+    if (idfvCallback == nil) {
+        [self.logger error:@"Callback for getting IDFV can't be null"];
+        return;
+    }
+
+    NSString *idfv = [ADJUtil idfv];
+    [ADJUtil launchInMainThread:^{
+        [idfvCallback didReadWithIdfv:idfv];
+    }];
 }
 
 - (NSURL *)convertUniversalLink:(NSURL *)url withScheme:(NSString *)scheme {
@@ -580,7 +596,7 @@ static dispatch_once_t onceToken = 0;
     [self.activityHandler trackAdRevenue:adRevenue];
 }
 
-- (void)attributionWithCallback:(nonnull id<ADJAdjustAttributionCallback>)attributionCallback {
+- (void)attributionWithCallback:(nonnull id<ADJAttributionCallback>)attributionCallback {
     if (attributionCallback == nil) {
         [self.logger error:@"Callback for getting attribution can't be null"];
         return;
@@ -604,12 +620,28 @@ static dispatch_once_t onceToken = 0;
     return [self.activityHandler adid];
 }
 
-- (NSString *)sdkVersion {
-    return [ADJUtil sdkVersion];
+- (void)sdkVersionWithCallback:(nonnull id<ADJSdkVersionCallback>)sdkVersionCallback {
+    if (sdkVersionCallback == nil) {
+        [self.logger error:@"Callback for getting SDK version can't be null"];
+        return;
+    }
+
+    NSString *sdkVersion = [ADJUtil sdkVersion];
+    [ADJUtil launchInMainThread:^{
+        [sdkVersionCallback didReadWithSdkVersion:sdkVersion];
+    }];
 }
 
-- (NSURL *)lastDeeplink {
-    return [ADJUserDefaults getCachedDeeplinkUrl];
+- (void)lastDeeplinkWithCallback:(nonnull id<ADJLastDeeplinkCallback>)lastDeeplinkCallback {
+    if (lastDeeplinkCallback == nil) {
+        [self.logger error:@"Callback for getting last opened deep link can't be null"];
+        return;
+    }
+
+    NSURL *lastDeeplink = [ADJUserDefaults getCachedDeeplinkUrl];
+    [ADJUtil launchInMainThread:^{
+        [lastDeeplinkCallback didReadWithLastDeeplink:lastDeeplink];
+    }];
 }
 
 - (void)verifyPurchase:(nonnull ADJPurchase *)purchase

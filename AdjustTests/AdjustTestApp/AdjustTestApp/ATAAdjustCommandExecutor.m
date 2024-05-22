@@ -19,7 +19,12 @@
 #import "ATAAdjustCommandExecutor.h"
 #import "ViewController.h"
 
-@interface ADJAttributionGetterSendAll : NSObject<ADJAdjustAttributionCallback>
+@interface ADJAttributionGetterSendAll : NSObject<ADJAttributionCallback>
+@property (nonatomic, strong) ATLTestLibrary *testLibrary;
+@property (nonatomic, copy) NSString *extraPath;
+@end
+
+@interface ADJLastDeeplinkGetterSendAll : NSObject<ADJLastDeeplinkCallback>
 @property (nonatomic, strong) ATLTestLibrary *testLibrary;
 @property (nonatomic, copy) NSString *extraPath;
 @end
@@ -750,10 +755,12 @@
 }
 
 - (void)getLastDeeplink:(NSDictionary *)parameters {
-    NSURL *lastDeeplink = [Adjust lastDeeplink];
-    NSString *lastDeeplinkString = lastDeeplink == nil ? @"" : [lastDeeplink absoluteString];
-    [self.testLibrary addInfoToSend:@"last_deeplink" value:lastDeeplinkString];
-    [self.testLibrary sendInfoToServer:self.extraPath];
+    ADJLastDeeplinkGetterSendAll *_Nonnull lastDeeplinkGetter =
+    [[ADJLastDeeplinkGetterSendAll alloc] init];
+    lastDeeplinkGetter.testLibrary = self.testLibrary;
+    lastDeeplinkGetter.extraPath = self.extraPath;
+
+    [Adjust lastDeeplinkWithCallback:lastDeeplinkGetter];
 }
 
 - (void)verifyPurchase:(NSDictionary *)parameters {
@@ -825,6 +832,16 @@
     [self.testLibrary addInfoToSend:@"cost_amount" value:[attribution.costAmount stringValue]];
     [self.testLibrary addInfoToSend:@"cost_currency" value:attribution.costCurrency];
 
+    [self.testLibrary sendInfoToServer:self.extraPath];
+}
+
+@end
+
+@implementation ADJLastDeeplinkGetterSendAll
+
+- (void)didReadWithLastDeeplink:(nullable NSURL *)lastDeeplink { 
+    NSString *lastDeeplinkString = lastDeeplink == nil ? @"" : [lastDeeplink absoluteString];
+    [self.testLibrary addInfoToSend:@"last_deeplink" value:lastDeeplinkString];
     [self.testLibrary sendInfoToServer:self.extraPath];
 }
 

@@ -38,7 +38,11 @@ typedef void(^AdjustResolvedDeeplinkBlock)(NSString * _Nonnull resolvedLink);
 
 @end
 
-@protocol ADJAdjustAttributionCallback;
+@protocol ADJAttributionCallback;
+@protocol ADJIdfaCallback;
+@protocol ADJIdfvCallback;
+@protocol ADJSdkVersionCallback;
+@protocol ADJLastDeeplinkCallback;
 
 /**
  * Constants for our supported tracking environments.
@@ -159,18 +163,18 @@ extern NSString * __nonnull const ADJDataResidencyUS;
 + (void)setOfflineMode:(BOOL)enabled;
 
 /**
- * @brief Retrieve iOS device IDFA value.
+ * @brief Retrieve iOS device IDFA value through a callback.
  *
- * @return Device IDFA value.
+ * @param idfaCallback Callback to get IDFA value delivered to.
  */
-+ (nullable NSString *)idfa;
++ (void)idfaWithCallback:(nonnull id<ADJIdfaCallback>)idfaCallback;
 
 /**
- * @brief Retrieve iOS device IDFV value.
+ * @brief Retrieve iOS device IDFV value through a callback.
  *
- * @return Device IDFV value.
+ * @param idfvCallback Callback to get the IDFV value delivered to.
  */
-+ (nullable NSString *)idfv;
++ (void)idfvWithCallback:(nonnull id<ADJIdfvCallback>)idfvCallback;
 
 
 /**
@@ -188,14 +192,14 @@ extern NSString * __nonnull const ADJDataResidencyUS;
  * @note Attribution information is available only after installation has been successfully tracked
  *       and attribution information arrived after that from the backend.
  */
-+ (void)attributionWithCallback:(nonnull id<ADJAdjustAttributionCallback>)attributionCallback;
++ (void)attributionWithCallback:(nonnull id<ADJAttributionCallback>)attributionCallback;
 
 /**
- * @brief Get current Adjust SDK version string.
+ * @brief Get current Adjust SDK version string through a callback.
  *
- * @return Adjust SDK version string (iosX.Y.Z).
+ * @param sdkVersionCallback Callback to get the Adjust SDK version string (iosX.Y.Z) delivered to.
  */
-+ (nullable NSString *)sdkVersion;
++ (void)sdkVersionWithCallback:(nonnull id<ADJSdkVersionCallback>)sdkVersionCallback;
 
 /**
  * @brief Convert a universal link style URL to a deeplink style URL with the corresponding scheme.
@@ -309,11 +313,11 @@ extern NSString * __nonnull const ADJDataResidencyUS;
                 completionHandler:(void (^_Nullable)(NSError *_Nullable error))completion;
 
 /**
- * @brief Get the last deep link which has opened the app.
+ * @brief Get the last deep link which has opened the app through a callback.
  *
- * @return Last deep link which has opened the app.
+ * @param lastDeeplinkCallback Callback to get the last opened deep link delivered to.
  */
-+ (nullable NSURL *)lastDeeplink;
++ (void)lastDeeplinkWithCallback:(nonnull id<ADJLastDeeplinkCallback>)lastDeeplinkCallback;
 
 /**
  * @brief Verify in-app-purchase.
@@ -387,11 +391,13 @@ extern NSString * __nonnull const ADJDataResidencyUS;
 
 - (nullable NSString *)adid;
 
-- (nullable NSString *)idfa;
+- (void)idfaWithCallback:(nonnull id<ADJIdfaCallback>)idfaCallback;
 
-- (nullable NSString *)sdkVersion;
+- (void)idfvWithCallback:(nonnull id<ADJIdfvCallback>)idfvCallback;
 
-- (void)attributionWithCallback:(nonnull id<ADJAdjustAttributionCallback>)attributionCallback;
+- (void)sdkVersionWithCallback:(nonnull id<ADJSdkVersionCallback>)sdkVersionCallback;
+
+- (void)attributionWithCallback:(nonnull id<ADJAttributionCallback>)attributionCallback;
 
 - (nullable NSURL *)convertUniversalLink:(nonnull NSURL *)url withScheme:(nonnull NSString *)scheme;
 
@@ -410,7 +416,7 @@ extern NSString * __nonnull const ADJDataResidencyUS;
 
 - (void)trackAdRevenue:(nonnull ADJAdRevenue *)adRevenue;
 
-- (nullable NSURL *)lastDeeplink;
+- (void)lastDeeplinkWithCallback:(nonnull id<ADJLastDeeplinkCallback>)lastDeeplinkCallback;
 
 - (void)verifyPurchase:(nonnull ADJPurchase *)purchase
      completionHandler:(void (^_Nonnull)(ADJPurchaseVerificationResult * _Nonnull verificationResult))completionHandler;
@@ -421,8 +427,32 @@ extern NSString * __nonnull const ADJDataResidencyUS;
 
 @end
 
-@protocol ADJAdjustAttributionCallback <NSObject>
+@protocol ADJAttributionCallback <NSObject>
 
 - (void)didReadWithAdjustAttribution:(nonnull ADJAttribution *)adjustAttribution;
+
+@end
+
+@protocol ADJIdfaCallback <NSObject>
+
+- (void)didReadWithIdfa:(nullable NSString *)idfa;
+
+@end
+
+@protocol ADJIdfvCallback <NSObject>
+
+- (void)didReadWithIdfv:(nullable NSString *)idfv;
+
+@end
+
+@protocol ADJSdkVersionCallback <NSObject>
+
+- (void)didReadWithSdkVersion:(nullable NSString *)sdkVersion;
+
+@end
+
+@protocol ADJLastDeeplinkCallback <NSObject>
+
+- (void)didReadWithLastDeeplink:(nullable NSURL *)lastDeeplink;
 
 @end
