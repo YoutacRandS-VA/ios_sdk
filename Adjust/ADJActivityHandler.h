@@ -18,8 +18,6 @@
 @property (nonatomic, assign) BOOL enabled;
 @property (nonatomic, assign) BOOL offline;
 @property (nonatomic, assign) BOOL background;
-@property (nonatomic, assign) BOOL delayStart;
-@property (nonatomic, assign) BOOL updatePackages;
 @property (nonatomic, assign) BOOL updatePackagesAttData;
 @property (nonatomic, assign) BOOL firstLaunch;
 @property (nonatomic, assign) BOOL sessionResponseProcessed;
@@ -31,9 +29,6 @@
 - (BOOL)isOnline;
 - (BOOL)isInBackground;
 - (BOOL)isInForeground;
-- (BOOL)isInDelayedStart;
-- (BOOL)isNotInDelayedStart;
-- (BOOL)itHasToUpdatePackages;
 - (BOOL)itHasToUpdatePackagesAttData;
 - (BOOL)isFirstLaunch;
 - (BOOL)hasSessionResponseNotBeenProcessed;
@@ -99,7 +94,6 @@
                                 error:(NSError * _Nullable)error;
 
 - (void)setOfflineMode:(BOOL)offline;
-- (void)sendFirstPackages;
 
 - (void)addGlobalCallbackParameter:(NSString *_Nonnull)param forKey:(NSString *_Nonnull)key;
 - (void)addGlobalPartnerParameter:(NSString *_Nonnull)param forKey:(NSString *_Nonnull)key;
