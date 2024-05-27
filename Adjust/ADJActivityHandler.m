@@ -108,7 +108,6 @@ const BOOL kSkanRegisterLockWindow = NO;
 // copy for objects shared with the user
 @property (nonatomic, copy) ADJConfig *adjustConfig;
 @property (nonatomic, weak) ADJSavedPreLaunch *savedPreLaunch;
-@property (nonatomic, copy) NSData* deviceTokenData;
 @property (nonatomic, copy) NSString* basePath;
 @property (nonatomic, copy) NSString* gdprPath;
 @property (nonatomic, copy) NSString* subscriptionPath;
@@ -237,13 +236,6 @@ const BOOL kSkanRegisterLockWindow = NO;
                          [selfI initI:selfI
                      preLaunchActions:savedPreLaunch];
                      }];
-
-    /* Not needed, done already in initI:preLaunchActionsArray: method.
-    // self.deviceTokenData = savedPreLaunch.deviceTokenData;
-    if (self.activityState != nil) {
-        [self setDeviceToken:[ADJUserDefaults getPushToken]];
-    }
-    */
 
     [self addNotificationObserver];
 
@@ -419,19 +411,19 @@ const BOOL kSkanRegisterLockWindow = NO;
     }];
 }
 
-- (void)setDeviceToken:(NSData *)deviceToken {
+- (void)setPushTokenData:(NSData *)pushTokenData {
     [ADJUtil launchInQueue:self.internalQueue
                 selfInject:self
                      block:^(ADJActivityHandler * selfI) {
-                         [selfI setDeviceTokenI:selfI deviceToken:deviceToken];
+                         [selfI setPushTokenI:selfI pushTokenData:pushTokenData];
                      }];
 }
 
-- (void)setPushToken:(NSString *)pushToken {
+- (void)setPushTokenString:(NSString *)pushTokenString {
     [ADJUtil launchInQueue:self.internalQueue
                 selfInject:self
                      block:^(ADJActivityHandler * selfI) {
-                         [selfI setPushTokenI:selfI pushToken:pushToken];
+                         [selfI setPushTokenI:selfI pushTokenString:pushTokenString];
                      }];
 }
 
@@ -817,18 +809,11 @@ preLaunchActions:(ADJSavedPreLaunch*)preLaunchActions
         [selfI.logger info:@"Default tracker: '%@'", selfI.adjustConfig.defaultTracker];
     }
 
-    if (selfI.deviceTokenData != nil) {
-        [selfI.logger info:@"Push token: '%@'", selfI.deviceTokenData];
-        if (selfI.activityState != nil) {
-            [selfI setDeviceToken:selfI.deviceTokenData];
-        }
-    } else {
-        if (selfI.activityState != nil) {
-            NSData *deviceToken = [ADJUserDefaults getPushTokenData];
-            [selfI setDeviceToken:deviceToken];
-            NSString *pushToken = [ADJUserDefaults getPushTokenString];
-            [selfI setPushToken:pushToken];
-        }
+    if (selfI.activityState != nil) {
+        NSData *pushTokenData = [ADJUserDefaults getPushTokenData];
+        [selfI setPushTokenData:pushTokenData];
+        NSString *pushTokenString = [ADJUserDefaults getPushTokenString];
+        [selfI setPushTokenString:pushTokenString];
     }
 
     if (selfI.activityState != nil) {
@@ -982,13 +967,12 @@ preLaunchActions:(ADJSavedPreLaunch*)preLaunchActions
     if (selfI.activityState == nil) {
         selfI.activityState = [[ADJActivityState alloc] init];
 
-        // selfI.activityState.deviceToken = [ADJUtil convertDeviceToken:selfI.deviceTokenData];
-        NSData *deviceToken = [ADJUserDefaults getPushTokenData];
-        NSString *deviceTokenString = [ADJUtil convertDeviceToken:deviceToken];
-        NSString *pushToken = [ADJUserDefaults getPushTokenString];
+        NSData *pushTokenData = [ADJUserDefaults getPushTokenData];
+        NSString *pushTokenDataAsString = [ADJUtil pushTokenDataAsString:pushTokenData];
+        NSString *pushTokenString = [ADJUserDefaults getPushTokenString];
         [ADJUtil launchSynchronisedWithObject:[ADJActivityState class]
                                         block:^{
-            selfI.activityState.deviceToken = deviceTokenString != nil ? deviceTokenString : pushToken;
+            selfI.activityState.pushToken = pushTokenDataAsString != nil ? pushTokenDataAsString : pushTokenString;
         }];
 
         // track the first session package only if it's enabled
@@ -1679,13 +1663,13 @@ preLaunchActions:(ADJSavedPreLaunch*)preLaunchActions
             double now = [NSDate.date timeIntervalSince1970];
             [self trackNewSessionI:now withActivityHandler:selfI];
         }
-        NSData *deviceToken = [ADJUserDefaults getPushTokenData];
-        if (deviceToken != nil && ![selfI.activityState.deviceToken isEqualToString:[ADJUtil convertDeviceToken:deviceToken]]) {
-            [self setDeviceToken:deviceToken];
+        NSData *pushTokenData = [ADJUserDefaults getPushTokenData];
+        if (pushTokenData != nil && ![selfI.activityState.pushToken isEqualToString:[ADJUtil pushTokenDataAsString:pushTokenData]]) {
+            [self setPushTokenData:pushTokenData];
         }
-        NSString *pushToken = [ADJUserDefaults getPushTokenString];
-        if (pushToken != nil && ![selfI.activityState.deviceToken isEqualToString:pushToken]) {
-            [self setPushToken:pushToken];
+        NSString *pushTokenString = [ADJUserDefaults getPushTokenString];
+        if (pushTokenString != nil && ![selfI.activityState.pushToken isEqualToString:pushTokenString]) {
+            [self setPushTokenString:pushTokenString];
         }
         if (selfI.adjustConfig.allowAdServicesInfoReading == YES) {
             [selfI checkForAdServicesAttributionI:selfI];
@@ -1903,8 +1887,8 @@ remainsPausedMessage:(NSString *)remainsPausedMessage
     return NO;
 }
 
-- (void)setDeviceTokenI:(ADJActivityHandler *)selfI
-            deviceToken:(NSData *)deviceToken {
+- (void)setPushTokenI:(ADJActivityHandler *)selfI
+        pushTokenData:(NSData *)pushTokenData {
     if (![selfI isEnabledI:selfI]) {
         return;
     }
@@ -1915,20 +1899,19 @@ remainsPausedMessage:(NSString *)remainsPausedMessage
         return;
     }
 
-    NSString *deviceTokenString = [ADJUtil convertDeviceToken:deviceToken];
+    NSString *pushTokenDataAsString = [ADJUtil pushTokenDataAsString:pushTokenData];
 
-    if (deviceTokenString == nil) {
+    if (pushTokenDataAsString == nil) {
         return;
     }
-
-    if ([deviceTokenString isEqualToString:selfI.activityState.deviceToken]) {
+    if ([pushTokenDataAsString isEqualToString:selfI.activityState.pushToken]) {
         return;
     }
 
     // save new push token
     [ADJUtil launchSynchronisedWithObject:[ADJActivityState class]
                                     block:^{
-        selfI.activityState.deviceToken = deviceTokenString;
+        selfI.activityState.pushToken = pushTokenDataAsString;
     }];
     [selfI writeActivityStateI:selfI];
 
@@ -1951,7 +1934,7 @@ remainsPausedMessage:(NSString *)remainsPausedMessage
 }
 
 - (void)setPushTokenI:(ADJActivityHandler *)selfI
-            pushToken:(NSString *)pushToken {
+      pushTokenString:(NSString *)pushTokenString {
     if (![selfI isEnabledI:selfI]) {
         return;
     }
@@ -1961,17 +1944,17 @@ remainsPausedMessage:(NSString *)remainsPausedMessage
     if (selfI.activityState.isGdprForgotten) {
         return;
     }
-    if (pushToken == nil) {
+    if (pushTokenString == nil) {
         return;
     }
-    if ([pushToken isEqualToString:selfI.activityState.deviceToken]) {
+    if ([pushTokenString isEqualToString:selfI.activityState.pushToken]) {
         return;
     }
 
     // save new push token
     [ADJUtil launchSynchronisedWithObject:[ADJActivityState class]
                                     block:^{
-        selfI.activityState.deviceToken = pushToken;
+        selfI.activityState.pushToken = pushTokenString;
     }];
     [selfI writeActivityStateI:selfI];
 
