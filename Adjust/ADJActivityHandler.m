@@ -1447,7 +1447,6 @@ preLaunchActions:(ADJSavedPreLaunch*)preLaunchActions
     [purchaseVerificationBuilder buildPurchaseVerificationPackageWithEvent:event];
     purchaseVerificationPackage.purchaseVerificationCallback = completionHandler;
     [selfI.purchaseVerificationHandler sendPurchaseVerificationPackage:purchaseVerificationPackage];
-    // TODO: discuss whether this order of performing actions is okay
     [selfI trackEvent:event];
 }
 
