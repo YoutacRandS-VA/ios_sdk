@@ -330,6 +330,9 @@ static NSString * fbAppIdStatic = nil;
             this.logLevel = null;
             this.sendInBackground = null;
             this.needsCost = null;
+            this.urlStrategies = [];
+            this.useSubdomains = null;
+            this.isDataResidency = null;
             this.allowAdServicesInfoReading = null;
             this.isIdfaReadingAllowed = null;
             this.isSkanAttributionHandlingEnabled = null;
@@ -342,7 +345,6 @@ static NSString * fbAppIdStatic = nil;
             this.sessionSuccessCallback = null;
             this.sessionFailureCallback = null;
             this.deferredDeeplinkCallback = null;
-            this.urlStrategy = null;
             this.shouldReadDeviceInfoOnce = null;
             this.attConsentWaitingSeconds = null;
             this.eventDeduplicationIdsMaxSize = null;
@@ -358,14 +360,6 @@ static NSString * fbAppIdStatic = nil;
         AdjustConfig.LogLevelError = 'ERROR';
         AdjustConfig.LogLevelAssert = 'ASSERT';
         AdjustConfig.LogLevelSuppress = 'SUPPRESS';
-
-        AdjustConfig.UrlStrategyIndia = 'UrlStrategyIndia';
-        AdjustConfig.UrlStrategyChina = 'UrlStrategyChina';
-        AdjustConfig.UrlStrategyCn = 'UrlStrategyCn';
-        AdjustConfig.UrlStrategyCnOnly = 'UrlStrategyCnOnly';
-        AdjustConfig.DataResidencyEU = 'DataResidencyEU';
-        AdjustConfig.DataResidencyTR = 'DataResidencyTR';
-        AdjustConfig.DataResidencyUS = 'DataResidencyUS';
 
         AdjustConfig.prototype.registerCallbackHandlers = function() {
             var registerCallbackHandler = function(callbackName) {
@@ -442,9 +436,6 @@ static NSString * fbAppIdStatic = nil;
             this.fbPixelMapping.push(fbEventNameKey);
             this.fbPixelMapping.push(adjEventTokenValue);
         };
-        AdjustConfig.prototype.setUrlStrategy = function(urlStrategy) {
-            this.urlStrategy = urlStrategy;
-        };
         AdjustConfig.prototype.readDeviceInfoOnce = function() {
             this.shouldReadDeviceInfoOnce = true;
         };
@@ -453,6 +444,11 @@ static NSString * fbAppIdStatic = nil;
         };
         AdjustConfig.prototype.setEventDeduplicationIdsMaxSize = function(eventDeduplicationIdsMaxSize) {
             this.eventDeduplicationIdsMaxSize = eventDeduplicationIdsMaxSize;
+        };
+        AdjustConfig.prototype.setUrlStrategies = function(urlStrategies, useSubdomains, isDataResidency) {
+            this.urlStrategies = urlStrategies;
+            this.useSubdomains = useSubdomains;
+            this.isDataResidency = isDataResidency;
         };
     })();); // END preprocessorJSCode
     //, augmentedSection];

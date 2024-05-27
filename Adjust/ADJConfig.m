@@ -102,6 +102,24 @@
     _shouldReadDeviceInfoOnce = YES;
 }
 
+- (void)setUrlStrategyDomains:(NSArray * _Nullable)domains
+               withSubdomains:(BOOL)useSubdomains
+              isDataResidency:(BOOL)isDataResidency {
+    if (domains == nil) {
+        return;
+    }
+    if (domains.count == 0) {
+        return;
+    }
+
+    if (_urlStrategyDomains == nil) {
+        _urlStrategyDomains = [NSArray arrayWithArray:domains];
+    }
+
+    _useSubdomains = useSubdomains;
+    _isDataResidency = isDataResidency;
+}
+
 - (void)setDelegate:(NSObject<AdjustDelegate> *)delegate {
     BOOL hasResponseDelegate = NO;
     BOOL implementsDeeplinkCallback = NO;
@@ -203,7 +221,9 @@
         copy.externalDeviceId = [self.externalDeviceId copyWithZone:zone];
         copy.needsCost = self.needsCost;
         copy->_isSkanAttributionHandlingEnabled = self.isSkanAttributionHandlingEnabled;
-        copy.urlStrategy = [self.urlStrategy copyWithZone:zone];
+        copy->_urlStrategyDomains = [self.urlStrategyDomains copyWithZone:zone];
+        copy->_useSubdomains = self.useSubdomains;
+        copy->_isDataResidency = self.isDataResidency;
         copy->_isLinkMeEnabled = self.isLinkMeEnabled;
         copy->_isIdfaReadingAllowed = self.isIdfaReadingAllowed;
         copy->_shouldReadDeviceInfoOnce = self.shouldReadDeviceInfoOnce;

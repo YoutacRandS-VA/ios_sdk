@@ -26,6 +26,7 @@
 @property (nonatomic, copy) NSString *sessionFailureCallbackName;
 @property (nonatomic, copy) NSString *deferredDeeplinkCallbackName;
 @property (nonatomic, strong) NSMutableDictionary *fbPixelMapping;
+@property (nonatomic, strong) NSMutableArray *urlStrategies;
 @property (nonatomic, strong) ADJAttribution *attribution;
 
 @end
@@ -233,10 +234,12 @@
         NSString *sessionSuccessCallback = [data objectForKey:@"sessionSuccessCallback"];
         NSString *sessionFailureCallback = [data objectForKey:@"sessionFailureCallback"];
         NSString *deferredDeeplinkCallback = [data objectForKey:@"deferredDeeplinkCallback"];
-        NSString *urlStrategy = [data objectForKey:@"urlStrategy"];
         NSNumber *shouldReadDeviceInfoOnce = [data objectForKey:@"shouldReadDeviceInfoOnce"];
         NSNumber *attConsentWaitingSeconds = [data objectForKey:@"attConsentWaitingSeconds"];
         NSNumber *eventDeduplicationIdsMaxSize = [data objectForKey:@"eventDeduplicationIdsMaxSize"];
+        id urlStrategies = [data objectForKey:@"urlStrategies"];
+        NSNumber *useSubdomains = [data objectForKey:@"useSubdomains"];
+        NSNumber *isDataResidency = [data objectForKey:@"isDataResidency"];
 
         ADJConfig *adjustConfig;
         if ([self isFieldValid:allowSuppressLogLevel]) {
@@ -327,9 +330,6 @@
             || self.deferredDeeplinkCallbackName != nil) {
             [adjustConfig setDelegate:self];
         }
-        if ([self isFieldValid:urlStrategy]) {
-            [adjustConfig setUrlStrategy:urlStrategy];
-        }
         if ([self isFieldValid:shouldReadDeviceInfoOnce]) {
             if ([shouldReadDeviceInfoOnce boolValue] == YES) {
                 [adjustConfig readDeviceIdsOnce];
@@ -337,6 +337,20 @@
         }
         if ([self isFieldValid:eventDeduplicationIdsMaxSize]) {
             [adjustConfig setEventDeduplicationIdsMaxSize:[eventDeduplicationIdsMaxSize integerValue]];
+        }
+
+        // URL strategies
+        if (urlStrategies != nil && [urlStrategies count] > 0) {
+            self.urlStrategies = [[NSMutableArray alloc] initWithCapacity:[urlStrategies count]];
+            for (int i = 0; i < [urlStrategies count]; i += 1) {
+                NSString *domain = [[urlStrategies objectAtIndex:i] description];
+                [self.urlStrategies addObject:domain];
+            }
+        }
+        if ([self isFieldValid:useSubdomains] && [self isFieldValid:isDataResidency]) {
+            [adjustConfig setUrlStrategyDomains:(NSArray *)self.urlStrategies
+                                 withSubdomains:[useSubdomains boolValue]
+                                isDataResidency:[isDataResidency boolValue]];
         }
 
         [Adjust appDidLaunch:adjustConfig];
@@ -611,7 +625,7 @@
         AdjustTestOptions *testOptions = [[AdjustTestOptions alloc] init];
 
         if ([self isFieldValid:urlOverwrite]) {
-            testOptions.urlOverwrite = urlOverwrite;
+            testOptions.testUrlOverwrite = urlOverwrite;
         }
         if ([self isFieldValid:extraPath]) {
             testOptions.extraPath = extraPath;
