@@ -13,6 +13,7 @@
 #import "ADJPackageBuilder.h"
 #import "ADJActivityPackage.h"
 #import "NSString+ADJAdditions.h"
+#import "ADJUserDefaults.h"
 #include <stdlib.h>
 
 static NSString * const ADJMethodGET = @"MethodGET";
@@ -80,21 +81,34 @@ static NSString * const ADJMethodPOST = @"MethodPOST";
                                     sendingParams:sendingParameters
                                      responseData:responseData];
 
-    NSMutableDictionary *parametersCopy = [[NSMutableDictionary alloc]
+    NSMutableDictionary *mergedParameters = [[NSMutableDictionary alloc]
                                           initWithDictionary:parameters];
-    [parametersCopy addEntriesFromDictionary:responseData.sendingParameters];
+    [mergedParameters addEntriesFromDictionary:responseData.sendingParameters];
 
-    [self signWithSigV2PluginWithParams:parametersCopy
-                           activityKind:activityKind
-                              clientSdk:clientSdk];
-    NSString * authorizationHeader = [self buildAuthorizationHeader:parametersCopy
-                                                       activityKind:activityKind];
+    NSMutableDictionary<NSString *, NSString *> *_Nonnull outputParams =
+        [self signWithSigPluginWithMergedParameters:mergedParameters
+                                       activityKind:activityKind
+                                          clientSdk:clientSdk
+                                      urlHostString:urlHostString];
+
+    NSString *_Nullable authorizationHeader = nil;
+
+    if (outputParams.count > 0) {
+        authorizationHeader = [outputParams objectForKey:@"authorization"];
+        [outputParams removeObjectForKey:@"authorization"];
+
+        if ([outputParams objectForKey:@"endpoint"] != nil) {
+            urlHostString = [outputParams objectForKey:@"endpoint"];
+        }
+        [outputParams removeObjectForKey:@"endpoint"];
+
+        mergedParameters = outputParams;
+    }
 
     NSMutableURLRequest *urlRequest = [self requestForPostPackage:path
                                                         clientSdk:clientSdk
-                                                       parameters:parameters
-                                                    urlHostString:urlHostString
-                                                sendingParameters:responseData.sendingParameters];
+                                                 mergedParameters:mergedParameters
+                                                    urlHostString:urlHostString];
 
     [self sendRequest:urlRequest
   authorizationHeader:authorizationHeader
@@ -118,21 +132,34 @@ static NSString * const ADJMethodPOST = @"MethodPOST";
                                     sendingParams:sendingParameters
                                      responseData:responseData];
 
-    NSMutableDictionary *parametersCopy = [[NSMutableDictionary alloc]
+    NSMutableDictionary *mergedParameters = [[NSMutableDictionary alloc]
                                           initWithDictionary:parameters];
-    [parametersCopy addEntriesFromDictionary:responseData.sendingParameters];
+    [mergedParameters addEntriesFromDictionary:responseData.sendingParameters];
 
-    [self signWithSigV2PluginWithParams:parametersCopy
-                           activityKind:activityKind
-                              clientSdk:clientSdk];
-    NSString * authorizationHeader = [self buildAuthorizationHeader:parametersCopy
-                                                       activityKind:activityKind];
+    NSMutableDictionary<NSString *, NSString *> *_Nonnull outputParams =
+        [self signWithSigPluginWithMergedParameters:mergedParameters
+                                       activityKind:activityKind
+                                          clientSdk:clientSdk
+                                      urlHostString:urlHostString];
+
+    NSString *_Nullable authorizationHeader = nil;
+
+    if (outputParams.count > 0) {
+        authorizationHeader = [outputParams objectForKey:@"authorization"];
+        [outputParams removeObjectForKey:@"authorization"];
+
+        if ([outputParams objectForKey:@"endpoint"] != nil) {
+            urlHostString = [outputParams objectForKey:@"endpoint"];
+        }
+        [outputParams removeObjectForKey:@"endpoint"];
+
+        mergedParameters = outputParams;
+    }
 
     NSMutableURLRequest *urlRequest = [self requestForGetPackage:path
                                                        clientSdk:clientSdk
-                                                      parameters:parameters
-                                                   urlHostString:urlHostString
-                                               sendingParameters:responseData.sendingParameters];
+                                                mergedParameters:mergedParameters
+                                                   urlHostString:urlHostString];
 
     [self sendRequest:urlRequest
   authorizationHeader:authorizationHeader
@@ -357,6 +384,11 @@ authorizationHeader:(NSString *)authorizationHeader
     responseData.continueInMilli = [responseData.jsonResponse objectForKey:@"continue_in"];
     responseData.retryInMilli = [responseData.jsonResponse objectForKey:@"retry_in"];
 
+    NSDictionary *controlParams = [responseData.jsonResponse objectForKey:@"control_params"];
+    if (controlParams != nil) {
+        [ADJUserDefaults saveControlParams:controlParams];
+    }
+
     NSString *trackingState = [responseData.jsonResponse objectForKey:@"tracking_state"];
     if (trackingState != nil) {
         if ([trackingState isEqualToString:@"opted_out"]) {
@@ -372,10 +404,8 @@ authorizationHeader:(NSString *)authorizationHeader
 - (NSMutableURLRequest *)
     requestForPostPackage:(NSString *)path
     clientSdk:(NSString *)clientSdk
-    parameters:(NSDictionary *)parameters
+    mergedParameters:(NSDictionary *)mergedParameters
     urlHostString:(NSString *)urlHostString
-    sendingParameters:
-        (NSDictionary<NSString *, NSString *> *)sendingParameters
 {
     NSString *urlString = [NSString stringWithFormat:@"%@%@%@",
                            urlHostString, self.urlStrategy.extraPath, path];
@@ -391,15 +421,10 @@ authorizationHeader:(NSString *)authorizationHeader
     [request setValue:clientSdk forHTTPHeaderField:@"Client-Sdk"];
     [request setValue:@"1" forHTTPHeaderField:@"Beta-Version"];
 
-    NSUInteger sendingParametersCount = sendingParameters? sendingParameters.count : 0;
     NSMutableArray<NSString *> *kvParameters =
-        [NSMutableArray arrayWithCapacity:
-            parameters.count + sendingParametersCount];
+        [NSMutableArray arrayWithCapacity:mergedParameters.count];
 
-    [self injectParameters:parameters
-        kvArray:kvParameters];
-    [self injectParameters:sendingParameters
-        kvArray:kvParameters];
+    [self injectParameters:mergedParameters kvArray:kvParameters];
 
     NSString *bodyString = [kvParameters componentsJoinedByString:@"&"];
     NSData *body = [NSData dataWithBytes:bodyString.UTF8String length:bodyString.length];
@@ -410,18 +435,13 @@ authorizationHeader:(NSString *)authorizationHeader
 - (NSMutableURLRequest *)
     requestForGetPackage:(NSString *)path
     clientSdk:(NSString *)clientSdk
-    parameters:(NSDictionary *)parameters
+    mergedParameters:(NSDictionary *)mergedParameters
     urlHostString:(NSString *)urlHostString
-    sendingParameters:(NSDictionary *)sendingParameters
 {
-    NSUInteger sendingParametersCount = sendingParameters? sendingParameters.count : 0;
     NSMutableArray<NSString *> *kvParameters =
-        [NSMutableArray arrayWithCapacity:
-            parameters.count + sendingParametersCount];
+        [NSMutableArray arrayWithCapacity:mergedParameters.count];
 
-    [self injectParameters:parameters
-        kvArray:kvParameters];
-    [self injectParameters:sendingParameters
+    [self injectParameters:mergedParameters
         kvArray:kvParameters];
 
     NSString *queryStringParameters = [kvParameters componentsJoinedByString:@"&"];
@@ -465,80 +485,6 @@ authorizationHeader:(NSString *)authorizationHeader
     }
 }
 
-#pragma mark - Authorization Header
-- (NSString *)buildAuthorizationHeader:(NSDictionary *)parameters
-                          activityKind:(ADJActivityKind)activityKind {
-    NSString *adjSigningId = [parameters objectForKey:@"adj_signing_id"];
-    NSString *signature = [parameters objectForKey:@"signature"];
-    NSString *headersId = [parameters objectForKey:@"headers_id"];
-    NSString *nativeVersion = [parameters objectForKey:@"native_version"];
-    NSString *algorithm = [parameters objectForKey:@"algorithm"];
-    NSString *authorizationHeaderWithAdjSigningId = [self buildAuthorizationHeaderV2:signature
-                                                                        adjSigningId:adjSigningId
-                                                                           headersId:headersId
-                                                                       nativeVersion:nativeVersion
-                                                                           algorithm:algorithm];
-    if (authorizationHeaderWithAdjSigningId != nil) {
-        return authorizationHeaderWithAdjSigningId;
-    }
-
-    NSString *secretId = [parameters objectForKey:@"secret_id"];
-    return [self buildAuthorizationHeaderV2:signature
-                                   secretId:secretId
-                                  headersId:headersId
-                              nativeVersion:nativeVersion
-                                  algorithm:algorithm];
-}
-
-- (NSString *)buildAuthorizationHeaderV2:(NSString *)signature
-                            adjSigningId:(NSString *)adjSigningId
-                               headersId:(NSString *)headersId
-                           nativeVersion:(NSString *)nativeVersion
-                               algorithm:(NSString *)algorithm
-{
-    if (adjSigningId == nil || signature == nil || headersId == nil) {
-        return nil;
-    }
-
-    NSString * signatureHeader = [NSString stringWithFormat:@"signature=\"%@\"", signature];
-    NSString * adjSigningIdHeader = [NSString stringWithFormat:@"adj_signing_id=\"%@\"", adjSigningId];
-    NSString * idHeader        = [NSString stringWithFormat:@"headers_id=\"%@\"", headersId];
-    NSString * algorithmHeader = [NSString stringWithFormat:@"algorithm=\"%@\"", algorithm != nil ? algorithm : @"adj1"];
-
-    NSString * authorizationHeader = [NSString stringWithFormat:@"Signature %@,%@,%@,%@",
-            signatureHeader, adjSigningIdHeader, algorithmHeader, idHeader];
-
-    if (nativeVersion == nil) {
-        return [authorizationHeader stringByAppendingFormat:@",native_version=\"\""];
-    }
-    return [authorizationHeader stringByAppendingFormat:@",native_version=\"%@\"", nativeVersion];
-}
-
-
-- (NSString *)buildAuthorizationHeaderV2:(NSString *)signature
-                                secretId:(NSString *)secretId
-                                headersId:(NSString *)headersId
-                           nativeVersion:(NSString *)nativeVersion
-                               algorithm:(NSString *)algorithm
-{
-    if (secretId == nil || signature == nil || headersId == nil) {
-        return nil;
-    }
-
-    NSString * signatureHeader = [NSString stringWithFormat:@"signature=\"%@\"", signature];
-    NSString * secretIdHeader  = [NSString stringWithFormat:@"secret_id=\"%@\"", secretId];
-    NSString * idHeader        = [NSString stringWithFormat:@"headers_id=\"%@\"", headersId];
-    NSString * algorithmHeader = [NSString stringWithFormat:@"algorithm=\"%@\"", algorithm != nil ? algorithm : @"adj1"];
-
-    NSString * authorizationHeader = [NSString stringWithFormat:@"Signature %@,%@,%@,%@",
-            signatureHeader, secretIdHeader, algorithmHeader, idHeader];
-
-    if (nativeVersion == nil) {
-        return [authorizationHeader stringByAppendingFormat:@",native_version=\"\""];
-    }
-    return [authorizationHeader stringByAppendingFormat:@",native_version=\"%@\"", nativeVersion];
-}
-
 #pragma mark - JSON
 - (void)saveJsonResponse:(NSData *)jsonData responseData:(ADJResponseData *)responseData {
     NSError *error = nil;
@@ -578,37 +524,49 @@ authorizationHeader:(NSString *)authorizationHeader
     return jsonDict;
 }
 
-- (void)signWithSigV2PluginWithParams:(NSMutableDictionary *)params
-                         activityKind:(ADJActivityKind)activityKind
-                            clientSdk:(NSString *)clientSdk
+- (nonnull NSMutableDictionary<NSString *, NSString *> *)
+    signWithSigPluginWithMergedParameters:
+        (nonnull NSDictionary<NSString *, NSString *> *)mergedParameters
+    activityKind:(ADJActivityKind)activityKind
+    clientSdk:(nonnull NSString *)clientSdk
+    urlHostString:(nonnull NSString *)urlHostString
 {
-    Class signerClass = NSClassFromString(@"ADJSigner");
+    NSMutableDictionary<NSString *, NSString *> *_Nonnull outputParams =
+        [NSMutableDictionary dictionary];
+
+    _Nullable Class signerClass = NSClassFromString(@"ADJSigner");
     if (signerClass == nil) {
-        return;
+        return outputParams;
     }
-    SEL signSEL = NSSelectorFromString(@"sign:withActivityKind:withSdkVersion:");
+    _Nonnull SEL signSEL = NSSelectorFromString(@"sign:withExtraParams:withOutputParams:");
     if (![signerClass respondsToSelector:signSEL]) {
-        return;
+        return outputParams;
     }
 
-    const char *activityKindChar = [[ADJActivityKindUtil activityKindToString:activityKind] UTF8String];
-    const char *sdkVersionChar = [clientSdk UTF8String];
+    NSMutableDictionary<NSString *, NSString *> *_Nonnull extraParams =
+        [NSMutableDictionary dictionary];
 
-    // Stack allocated strings to ensure their lifetime stays until the next iteration
-    static char packageActivityKind[64], sdkVersion[64];
-    strncpy(packageActivityKind, activityKindChar, strlen(activityKindChar) + 1);
-    strncpy(sdkVersion, sdkVersionChar, strlen(sdkVersionChar) + 1);
+    [extraParams setObject:clientSdk forKey:@"client_sdk"];
 
-    // NSInvocation setArgument requires lvalue references with exact matching types to the executed function signature.
-    // With this usage we ensure that the lifetime of the object remains until the next iteration, as it points to the
-    // stack allocated string where we copied the buffer.
-    const char *lvalActivityKind = packageActivityKind;
-    const char *lvalSdkVersion = sdkVersion;
+    [extraParams setObject:[ADJActivityKindUtil activityKindToString:activityKind]
+                    forKey:@"activity_kind"];
+
+    [extraParams setObject:urlHostString forKey:@"endpoint"];
+
+    NSDictionary<NSString *, NSString *> *_Nullable controlParams =
+        [ADJUserDefaults getControlParams];
+    if (controlParams != nil) {
+        for (NSString *_Nonnull controlParamsKey in controlParams) {
+            NSString *_Nonnull controlParamsValue = [controlParams objectForKey:controlParamsKey];
+
+            [extraParams setObject:controlParamsValue forKey:controlParamsKey];
+        }
+    }
 
     /*
-     [ADJSigner sign:parameters
-    withActivityKind:activityKindChar
-      withSdkVersion:sdkVersionChar];
+     [ADJSigner sign:packageParams
+      withExtraParams:extraParams
+     withOutputParams:outputParams];
      */
 
     NSMethodSignature *signMethodSignature = [signerClass methodSignatureForSelector:signSEL];
@@ -616,33 +574,13 @@ authorizationHeader:(NSString *)authorizationHeader
     [signInvocation setSelector:signSEL];
     [signInvocation setTarget:signerClass];
 
-    [signInvocation setArgument:&params atIndex:2];
-    [signInvocation setArgument:&lvalActivityKind atIndex:3];
-    [signInvocation setArgument:&lvalSdkVersion atIndex:4];
+    [signInvocation setArgument:&mergedParameters atIndex:2];
+    [signInvocation setArgument:&extraParams atIndex:3];
+    [signInvocation setArgument:&outputParams atIndex:4];
 
     [signInvocation invoke];
 
-    SEL getVersionSEL = NSSelectorFromString(@"getVersion");
-    if (![signerClass respondsToSelector:getVersionSEL]) {
-        return;
-    }
-    /*
-     NSString *signerVersion = [ADJSigner getVersion];
-     */
-    IMP getVersionIMP = [signerClass methodForSelector:getVersionSEL];
-    if (!getVersionIMP) {
-        return;
-    }
-    id (*getVersionFunc)(id, SEL) = (void *)getVersionIMP;
-    id signerVersion = getVersionFunc(signerClass, getVersionSEL);
-    if (![signerVersion isKindOfClass:[NSString class]]) {
-        return;
-    }
-
-    NSString *signerVersionString = (NSString *)signerVersion;
-    [ADJPackageBuilder parameters:params
-                           setString:signerVersionString
-                           forKey:@"native_version"];
+    return outputParams;
 }
 
 @end
