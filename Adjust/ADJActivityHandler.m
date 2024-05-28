@@ -385,13 +385,6 @@ const BOOL kSkanRegisterLockWindow = NO;
     return [self isGdprForgottenI:self];
 }
 
-- (NSString *)adid {
-    if (self.activityState == nil) {
-        return nil;
-    }
-    return self.activityState.adid;
-}
-
 - (void)processDeeplink:(NSURL *)deeplink withClickTime:(NSDate *)clickTime {
     [ADJUtil launchInQueue:self.internalQueue
                 selfInject:self
@@ -664,6 +657,25 @@ const BOOL kSkanRegisterLockWindow = NO;
     }];
 }
 
+- (void)adidWithCallback:(nonnull id<ADJAdidCallback>)adidCallback {
+    __block NSString *_Nullable localAdid = self.activityState == nil ? nil : self.activityState.adid;
+
+    if (localAdid == nil) {
+        if (self.savedPreLaunch.cachedAdidReadCallbacksArray == nil) {
+            self.savedPreLaunch.cachedAdidReadCallbacksArray = [NSMutableArray array];
+        }
+
+        [self.savedPreLaunch.cachedAdidReadCallbacksArray addObject:adidCallback];
+        return;
+    }
+
+    __block id<ADJAdidCallback>_Nonnull localAdidCallback = adidCallback;
+
+    [ADJUtil launchInMainThread:^{
+        [localAdidCallback didReadWithAdid:localAdid];
+    }];
+}
+
 - (void)setCoppaCompliance:(BOOL)isCoppaComplianceEnabled {
     [ADJUtil launchInQueue:self.internalQueue
                 selfInject:self
@@ -913,6 +925,7 @@ preLaunchActions:(ADJSavedPreLaunch*)preLaunchActions
        preLaunchActionsArray:preLaunchActions.preLaunchActionsArray];
 
     [selfI processCachedAttributionReadCallback];
+    [selfI processCachedAdidReadCallback];
 
     [ADJUtil launchInMainThreadWithInactive:^(BOOL isInactive) {
         [ADJUtil launchInQueue:self.internalQueue selfInject:self block:^(ADJActivityHandler * selfI) {
@@ -1618,6 +1631,7 @@ preLaunchActions:(ADJSavedPreLaunch*)preLaunchActions
         selfI.activityState.adid = adid;
     }];
     [selfI writeActivityStateI:selfI];
+    [selfI processCachedAdidReadCallback];
 }
 
 - (BOOL)updateAttributionI:(ADJActivityHandler *)selfI
@@ -1664,6 +1678,24 @@ preLaunchActions:(ADJSavedPreLaunch*)preLaunchActions
     }
 
     [self.savedPreLaunch.cachedAttributionReadCallbacksArray removeAllObjects];
+}
+
+- (void)processCachedAdidReadCallback {
+    __block NSString *_Nullable localAdid = self.activityState == nil ? nil : self.activityState.adid;
+    if (localAdid == nil) {
+        return;
+    }
+    if (self.savedPreLaunch.cachedAdidReadCallbacksArray == nil) {
+        return;
+    }
+
+    for (id<ADJAdidCallback> adidCallback in self.savedPreLaunch.cachedAdidReadCallbacksArray) {
+        [ADJUtil launchInMainThread:^{
+            [adidCallback didReadWithAdid:localAdid];
+        }];
+    }
+
+    [self.savedPreLaunch.cachedAdidReadCallbacksArray removeAllObjects];
 }
 
 - (void)setEnabledI:(ADJActivityHandler *)selfI enabled:(BOOL)enabled {
