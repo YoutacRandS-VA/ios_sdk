@@ -389,6 +389,7 @@ authorizationHeader:(NSString *)authorizationHeader
     request.HTTPMethod = @"POST";
     [request setValue:@"application/x-www-form-urlencoded" forHTTPHeaderField:@"Content-Type"];
     [request setValue:clientSdk forHTTPHeaderField:@"Client-Sdk"];
+    [request setValue:@"1" forHTTPHeaderField:@"Beta-Version"];
 
     NSUInteger sendingParametersCount = sendingParameters? sendingParameters.count : 0;
     NSMutableArray<NSString *> *kvParameters =
@@ -440,6 +441,7 @@ authorizationHeader:(NSString *)authorizationHeader
     request.timeoutInterval = self.requestTimeout;
     request.HTTPMethod = @"GET";
     [request setValue:clientSdk forHTTPHeaderField:@"Client-Sdk"];
+    [request setValue:@"1" forHTTPHeaderField:@"Beta-Version"];
     return request;
 }
 
