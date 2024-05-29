@@ -632,7 +632,7 @@ const BOOL kSkanRegisterLockWindow = NO;
 }
 
 - (void)verifyAppStorePurchase:(nonnull ADJAppStorePurchase *)purchase
-         withCompletionHandler:(void (^_Nonnull)(ADJPurchaseVerificationResult * _Nonnull verificationResult))completion {
+         withCompletionHandler:(nonnull ADJVerificationResultBlock)completion {
     [ADJUtil launchInQueue:self.internalQueue
                 selfInject:self
                      block:^(ADJActivityHandler * selfI) {
@@ -685,7 +685,7 @@ const BOOL kSkanRegisterLockWindow = NO;
 }
 
 - (void)verifyAndTrackAppStorePurchase:(nonnull ADJEvent *)event
-                 withCompletionHandler:(void (^_Nonnull)(ADJPurchaseVerificationResult * _Nonnull verificationResult))completion {
+                 withCompletionHandler:(nonnull ADJVerificationResultBlock)completion {
     [ADJUtil launchInQueue:self.internalQueue
                 selfInject:self
                      block:^(ADJActivityHandler * selfI) {
@@ -1330,7 +1330,7 @@ preLaunchActions:(ADJSavedPreLaunch*)preLaunchActions
 
 - (void)verifyAppStorePurchaseI:(ADJActivityHandler *)selfI
                        purchase:(nonnull ADJAppStorePurchase *)purchase
-          withCompletionHandler:(void (^_Nonnull)(ADJPurchaseVerificationResult * _Nonnull verificationResult))completion {
+          withCompletionHandler:(nonnull ADJVerificationResultBlock)completion {
     if ([ADJUtil isNull:completion]) {
         [selfI.logger warn:@"Purchase verification aborted because completion handler is null"];
         return;
@@ -1413,7 +1413,7 @@ preLaunchActions:(ADJSavedPreLaunch*)preLaunchActions
 
 - (void)verifyAndTrackAppStorePurchaseI:(ADJActivityHandler *)selfI
                                   event:(nonnull ADJEvent *)event
-                  withCompletionHandler:(void (^_Nonnull)(ADJPurchaseVerificationResult * _Nonnull verificationResult))completion {
+                  withCompletionHandler:(nonnull ADJVerificationResultBlock)completion {
     if ([ADJUtil isNull:completion]) {
         [selfI.logger warn:@"Purchase verification aborted because completion handler is null"];
         return;
