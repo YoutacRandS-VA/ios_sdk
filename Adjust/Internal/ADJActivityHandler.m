@@ -184,7 +184,7 @@ const BOOL kSkanRegisterLockWindow = NO;
         [[ADJSKAdNetwork getInstance] registerWithConversionValue:kSkanRegisterConversionValue
                                                       coarseValue:kSkanRegisterCoarseValue
                                                        lockWindow:numLockWindow
-                                                completionHandler:^(NSError * _Nonnull error) {
+                                            withCompletionHandler:^(NSError * _Nonnull error) {
             [self notifySkanCallbackWithConversionValue:numConversionValue
                                             coarseValue:kSkanRegisterCoarseValue
                                              lockWindow:numLockWindow
@@ -399,11 +399,11 @@ const BOOL kSkanRegisterLockWindow = NO;
 
 - (void)processAndResolveDeeplink:(NSURL * _Nullable)deeplink
                         clickTime:(NSDate * _Nullable)clickTime
-                completionHandler:(AdjustResolvedDeeplinkBlock _Nullable)completionHandler {
+            withCompletionHandler:(AdjustResolvedDeeplinkBlock _Nullable)completion {
     [ADJUtil launchInQueue:self.internalQueue
                 selfInject:self
                      block:^(ADJActivityHandler * selfI) {
-        selfI.cachedDeeplinkResolutionCallback = completionHandler;
+        selfI.cachedDeeplinkResolutionCallback = completion;
         [selfI processDeeplinkI:selfI url:deeplink clickTime:clickTime];
     }];
 }
@@ -632,11 +632,11 @@ const BOOL kSkanRegisterLockWindow = NO;
 }
 
 - (void)verifyAppStorePurchase:(nonnull ADJAppStorePurchase *)purchase
-             completionHandler:(void (^_Nonnull)(ADJPurchaseVerificationResult * _Nonnull verificationResult))completionHandler {
+         withCompletionHandler:(void (^_Nonnull)(ADJPurchaseVerificationResult * _Nonnull verificationResult))completion {
     [ADJUtil launchInQueue:self.internalQueue
                 selfInject:self
                      block:^(ADJActivityHandler * selfI) {
-        [selfI verifyAppStorePurchaseI:selfI purchase:purchase completionHandler:completionHandler];
+        [selfI verifyAppStorePurchaseI:selfI purchase:purchase withCompletionHandler:completion];
     }];
 }
 
@@ -690,11 +690,11 @@ const BOOL kSkanRegisterLockWindow = NO;
 }
 
 - (void)verifyAndTrackAppStorePurchase:(nonnull ADJEvent *)event
-                     completionHandler:(void (^_Nonnull)(ADJPurchaseVerificationResult * _Nonnull verificationResult))completionHandler {
+                 withCompletionHandler:(void (^_Nonnull)(ADJPurchaseVerificationResult * _Nonnull verificationResult))completion {
     [ADJUtil launchInQueue:self.internalQueue
                 selfInject:self
                      block:^(ADJActivityHandler * selfI) {
-        [selfI verifyAndTrackAppStorePurchaseI:selfI event:event completionHandler:completionHandler];
+        [selfI verifyAndTrackAppStorePurchaseI:selfI event:event withCompletionHandler:completion];
     }];
 }
 
@@ -1335,8 +1335,8 @@ preLaunchActions:(ADJSavedPreLaunch*)preLaunchActions
 
 - (void)verifyAppStorePurchaseI:(ADJActivityHandler *)selfI
                        purchase:(nonnull ADJAppStorePurchase *)purchase
-              completionHandler:(void (^_Nonnull)(ADJPurchaseVerificationResult * _Nonnull verificationResult))completionHandler {
-    if ([ADJUtil isNull:completionHandler]) {
+          withCompletionHandler:(void (^_Nonnull)(ADJPurchaseVerificationResult * _Nonnull verificationResult))completion {
+    if ([ADJUtil isNull:completion]) {
         [selfI.logger warn:@"Purchase verification aborted because completion handler is null"];
         return;
     }
@@ -1346,7 +1346,7 @@ preLaunchActions:(ADJSavedPreLaunch*)preLaunchActions
         verificationResult.verificationStatus = @"not_verified";
         verificationResult.code = 109;
         verificationResult.message = @"Purchase verification not available for data residency users right now";
-        completionHandler(verificationResult);
+        completion(verificationResult);
         return;
     }
     if (![selfI isEnabledI:selfI]) {
@@ -1359,7 +1359,7 @@ preLaunchActions:(ADJSavedPreLaunch*)preLaunchActions
         verificationResult.verificationStatus = @"not_verified";
         verificationResult.code = 101;
         verificationResult.message = @"Purchase verification aborted because purchase instance is null";
-        completionHandler(verificationResult);
+        completion(verificationResult);
         return;
     }
 
@@ -1379,7 +1379,7 @@ preLaunchActions:(ADJSavedPreLaunch*)preLaunchActions
 
     ADJActivityPackage *purchaseVerificationPackage = 
     [purchaseVerificationBuilder buildPurchaseVerificationPackageWithPurchase:purchase];
-    purchaseVerificationPackage.purchaseVerificationCallback = completionHandler;
+    purchaseVerificationPackage.purchaseVerificationCallback = completion;
     [selfI.purchaseVerificationHandler sendPurchaseVerificationPackage:purchaseVerificationPackage];
 }
 
@@ -1418,8 +1418,8 @@ preLaunchActions:(ADJSavedPreLaunch*)preLaunchActions
 
 - (void)verifyAndTrackAppStorePurchaseI:(ADJActivityHandler *)selfI
                                   event:(nonnull ADJEvent *)event
-                      completionHandler:(void (^_Nonnull)(ADJPurchaseVerificationResult * _Nonnull verificationResult))completionHandler {
-    if ([ADJUtil isNull:completionHandler]) {
+                  withCompletionHandler:(void (^_Nonnull)(ADJPurchaseVerificationResult * _Nonnull verificationResult))completion {
+    if ([ADJUtil isNull:completion]) {
         [selfI.logger warn:@"Purchase verification aborted because completion handler is null"];
         return;
     }
@@ -1429,7 +1429,7 @@ preLaunchActions:(ADJSavedPreLaunch*)preLaunchActions
         verificationResult.verificationStatus = @"not_verified";
         verificationResult.code = 109;
         verificationResult.message = @"Purchase verification not available for data residency users right now";
-        completionHandler(verificationResult);
+        completion(verificationResult);
         return;
     }
     if (![selfI isEnabledI:selfI]) {
@@ -1442,7 +1442,7 @@ preLaunchActions:(ADJSavedPreLaunch*)preLaunchActions
         verificationResult.verificationStatus = @"not_verified";
         verificationResult.code = 101;
         verificationResult.message = @"Purchase verification aborted because purchase instance is null";
-        completionHandler(verificationResult);
+        completion(verificationResult);
         return;
     }
 
@@ -1462,7 +1462,7 @@ preLaunchActions:(ADJSavedPreLaunch*)preLaunchActions
 
     ADJActivityPackage *purchaseVerificationPackage =
     [purchaseVerificationBuilder buildPurchaseVerificationPackageWithEvent:event];
-    purchaseVerificationPackage.purchaseVerificationCallback = completionHandler;
+    purchaseVerificationPackage.purchaseVerificationCallback = completion;
     [selfI.purchaseVerificationHandler sendPurchaseVerificationPackage:purchaseVerificationPackage];
     [selfI trackEvent:event];
 }
@@ -2794,7 +2794,7 @@ sdkClickHandlerOnly:(BOOL)sdkClickHandlerOnly
     [[ADJSKAdNetwork getInstance] updateConversionValue:[conversionValue intValue]
                                             coarseValue:coarseValue
                                              lockWindow:lockWindow
-                                      completionHandler:^(NSError *error) {
+                                  withCompletionHandler:^(NSError *error) {
         [self notifySkanCallbackWithConversionValue:conversionValue
                                         coarseValue:coarseValue
                                          lockWindow:lockWindow
