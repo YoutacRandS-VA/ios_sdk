@@ -142,10 +142,10 @@ const BOOL kSkanRegisterLockWindow = NO;
     }
     
     // check if ASA and IDFA tracking were switched off and warn just in case
-    if (adjustConfig.isIdfaReadingAllowed == NO) {
+    if (adjustConfig.isIdfaReadingEnabled == NO) {
         [ADJAdjustFactory.logger warn:@"IDFA reading has been switched off"];
     }
-    if (adjustConfig.allowAdServicesInfoReading == NO) {
+    if (adjustConfig.isAdServiesEnabled == NO) {
         [ADJAdjustFactory.logger warn:@"AdServices info reading has been switched off"];
     }
 
@@ -177,7 +177,7 @@ const BOOL kSkanRegisterLockWindow = NO;
     [self readActivityState];
     
     // register SKAdNetwork attribution if we haven't already
-    if (self.adjustConfig.isSkanAttributionHandlingEnabled) {
+    if (self.adjustConfig.isSkanAttributionEnabled) {
         NSNumber *numConversionValue = [NSNumber numberWithInteger:kSkanRegisterConversionValue];
         NSNumber *numLockWindow = [NSNumber numberWithBool:kSkanRegisterLockWindow];
 
@@ -851,7 +851,7 @@ preLaunchActions:(ADJSavedPreLaunch*)preLaunchActions
                                                      name:kForegroundTimerName
     ];
 
-    if (selfI.adjustConfig.sendInBackground) {
+    if (selfI.adjustConfig.isSendingInBackgroundEnabled) {
         [selfI.logger info:@"Send in background configured"];
         selfI.backgroundTimer = [ADJTimerOnce timerWithBlock:^{ [selfI backgroundTimerFired]; }
                                                       queue:selfI.internalQueue
@@ -1032,7 +1032,7 @@ preLaunchActions:(ADJSavedPreLaunch*)preLaunchActions
             selfI.activityState.updatePackagesAttData = [selfI.internalState itHasToUpdatePackagesAttData];
         }];
 
-        if (selfI.adjustConfig.allowAdServicesInfoReading == YES) {
+        if (selfI.adjustConfig.isAdServiesEnabled == YES) {
             [selfI checkForAdServicesAttributionI:selfI];
         }
 
@@ -1198,7 +1198,7 @@ preLaunchActions:(ADJSavedPreLaunch*)preLaunchActions
     [selfI.packageHandler sendFirstPackage];
 
     // if it is in the background and it can send, start the background timer
-    if (selfI.adjustConfig.sendInBackground && [selfI.internalState isInBackground]) {
+    if (selfI.adjustConfig.isSendingInBackgroundEnabled && [selfI.internalState isInBackground]) {
         [selfI startBackgroundTimerI:selfI];
     }
 
@@ -1394,7 +1394,7 @@ preLaunchActions:(ADJSavedPreLaunch*)preLaunchActions
     // third party sharing is disabled when coppa is enabled and vice-versa
     BOOL tpsEnabled = ! isCoppaComplianceEnabled;
     ADJThirdPartySharing *adjustThirdPartySharing =
-        [[ADJThirdPartySharing alloc] initWithIsEnabledNumberBool:@(tpsEnabled)];
+        [[ADJThirdPartySharing alloc] initWithIsEnabled:@(tpsEnabled)];
 
     double now = [NSDate.date timeIntervalSince1970];
     ADJPackageBuilder *tpsBuilder = [[ADJPackageBuilder alloc]
@@ -1605,8 +1605,9 @@ preLaunchActions:(ADJSavedPreLaunch*)preLaunchActions
     [ADJUtil launchInMainThread:^{
         BOOL toLaunchDeeplink = YES;
 
-        if ([selfI.adjustDelegate respondsToSelector:@selector(adjustDeeplinkResponse:)]) {
-            toLaunchDeeplink = [selfI.adjustDelegate adjustDeeplinkResponse:attributionResponseData.deeplink];
+        if ([selfI.adjustDelegate respondsToSelector:@selector(adjustDeferredDeeplinkReceived:)]) {
+            toLaunchDeeplink = [selfI.adjustDelegate
+                                adjustDeferredDeeplinkReceived:attributionResponseData.deeplink];
         }
 
         if (toLaunchDeeplink) {
@@ -1768,7 +1769,7 @@ preLaunchActions:(ADJSavedPreLaunch*)preLaunchActions
         if (pushTokenString != nil && ![selfI.activityState.pushToken isEqualToString:pushTokenString]) {
             [self setPushTokenString:pushTokenString];
         }
-        if (selfI.adjustConfig.allowAdServicesInfoReading == YES) {
+        if (selfI.adjustConfig.isAdServiesEnabled == YES) {
             [selfI checkForAdServicesAttributionI:selfI];
         }
     }
@@ -1781,7 +1782,7 @@ preLaunchActions:(ADJSavedPreLaunch*)preLaunchActions
 }
 
 - (BOOL)shouldFetchAdServicesI:(ADJActivityHandler *)selfI {
-    if (selfI.adjustConfig.allowAdServicesInfoReading == NO) {
+    if (selfI.adjustConfig.isAdServiesEnabled == NO) {
         return NO;
     }
     
@@ -2416,7 +2417,7 @@ sdkClickHandlerOnly:(BOOL)sdkClickHandlerOnly
     }
 
     // has the option to send in the background -> is to send
-    if (selfI.adjustConfig.sendInBackground) {
+    if (selfI.adjustConfig.isSendingInBackgroundEnabled) {
         return YES;
     }
 
@@ -2773,7 +2774,7 @@ sdkClickHandlerOnly:(BOOL)sdkClickHandlerOnly
 }
 
 - (void)checkConversionValue:(ADJResponseData *)responseData {
-    if (!self.adjustConfig.isSkanAttributionHandlingEnabled) {
+    if (!self.adjustConfig.isSkanAttributionEnabled) {
         return;
     }
     if (responseData.jsonResponse == nil) {
