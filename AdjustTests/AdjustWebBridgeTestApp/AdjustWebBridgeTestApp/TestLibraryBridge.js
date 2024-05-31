@@ -220,15 +220,19 @@ AdjustCommandExecutor.prototype.config = function(params) {
     }
     
     if ('needsCost' in params) {
-        var needsCostS = getFirstValue(params, 'needsCost');
-        var needsCost = needsCostS == 'true';
-        adjustConfig.setNeedsCost(needsCost);
+        var isCostDataInAttributionEnabledS = getFirstValue(params, 'needsCost');
+        var isCostDataInAttributionEnabled = isCostDataInAttributionEnabledS == 'true';
+        if (isCostDataInAttributionEnabled == true) {
+            adjustConfig.enableCostDataInAttribution();
+        }
     }
     
     if ('allowAdServicesInfoReading' in params) {
-        var allowAdServicesInfoReadingS = getFirstValue(params, 'allowAdServicesInfoReading');
-        var allowAdServicesInfoReading = allowAdServicesInfoReadingS == 'true';
-        adjustConfig.setAllowAdServicesInfoReading(allowAdServicesInfoReading);
+        var isAdServicesEnabledS = getFirstValue(params, 'allowAdServicesInfoReading');
+        var isAdServicesEnabled = isAdServicesEnabledS == 'true';
+        if (isAdServicesEnabled == false) {
+            adjustConfig.disableAdServices();
+        }
     }
     
     if ('allowIdfaReading' in params) {
@@ -354,12 +358,9 @@ AdjustCommandExecutor.prototype.config = function(params) {
 
     if ('deferredDeeplinkCallback' in params) {
         console.log('AdjustCommandExecutor.prototype.config deferredDeeplinkCallback');
-        var shouldOpenDeeplinkS = getFirstValue(params, 'deferredDeeplinkCallback');
-        if (shouldOpenDeeplinkS === 'true') {
-            adjustConfig.setOpenDeferredDeeplink(true);
-        }
-        if (shouldOpenDeeplinkS === 'false') {
-            adjustConfig.setOpenDeferredDeeplink(false);
+        var isOpeningDeferredDeeplinkEnabledS = getFirstValue(params, 'deferredDeeplinkCallback');
+        if (isOpeningDeferredDeeplinkEnabledS === 'false') {
+            adjustConfig.disableDeferredDeeplinkOpening();
         }
         var extraPath = this.extraPath;
         adjustConfig.setDeferredDeeplinkCallback(
@@ -385,7 +386,7 @@ AdjustCommandExecutor.prototype.start = function(params) {
     }
 
     var adjustConfig = this.savedConfigs[configNumber];
-    Adjust.appDidLaunch(adjustConfig);
+    Adjust.initSdk(adjustConfig);
 
     delete this.savedConfigs[0];
 };
@@ -466,12 +467,20 @@ AdjustCommandExecutor.prototype.resume = function(params) {
 
 AdjustCommandExecutor.prototype.setEnabled = function(params) {
     var enabled = getFirstValue(params, 'enabled') == 'true';
-    Adjust.setEnabled(enabled);
+    if (enabled == true) {
+        Adjust.enable();
+    } else {
+        Adjust.disable();
+    }
 };
 
 AdjustCommandExecutor.prototype.setOfflineMode = function(params) {
     var enabled = getFirstValue(params, 'enabled') == 'true';
-    Adjust.setOfflineMode(enabled);
+    if (enabled == true) {
+        Adjust.switchToOfflineMode();
+    } else {
+        Adjust.switchBackToOnlineMode();
+    }
 };
 
 AdjustCommandExecutor.prototype.gdprForgetMe = function(params) {

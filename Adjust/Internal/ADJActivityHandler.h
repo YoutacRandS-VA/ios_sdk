@@ -59,7 +59,7 @@
 
 - (id _Nullable)initWithConfig:(ADJConfig *_Nullable)adjustConfig
                 savedPreLaunch:(ADJSavedPreLaunch * _Nullable)savedPreLaunch
-    deeplinkResolutionCallback:(AdjustResolvedDeeplinkBlock _Nullable)deepLinkResolutionCallback;
+    deeplinkResolutionCallback:(ADJResolvedDeeplinkBlock _Nullable)deepLinkResolutionCallback;
 
 - (void)applicationDidBecomeActive;
 - (void)applicationWillResignActive;
@@ -72,14 +72,14 @@
 - (void)launchSdkClickResponseTasks:(ADJSdkClickResponseData * _Nullable)sdkClickResponseData;
 - (void)launchAttributionResponseTasks:(ADJAttributionResponseData * _Nullable)attributionResponseData;
 - (void)setEnabled:(BOOL)enabled;
-- (void)isEnabledWithCallback:(nonnull id<ADJIsEnabledCallback>)isEnabledCallback;
+- (void)isEnabledWithCompletionHandler:(nonnull ADJIsEnabledGetterBlock)completion;
 - (BOOL)isGdprForgotten;
 
 - (void)processDeeplink:(NSURL * _Nullable)deeplink
           withClickTime:(NSDate * _Nullable)clickTime;
 - (void)processAndResolveDeeplink:(NSURL * _Nullable)deeplink
                         clickTime:(NSDate * _Nullable)clickTime
-                completionHandler:(AdjustResolvedDeeplinkBlock _Nullable)completionHandler;
+            withCompletionHandler:(ADJResolvedDeeplinkBlock _Nullable)completion;
 - (void)setPushTokenData:(NSData * _Nullable)pushTokenData;
 - (void)setPushTokenString:(NSString * _Nullable)pushTokenString;
 - (void)setGdprForgetMe;
@@ -105,13 +105,13 @@
 - (void)trackAppStoreSubscription:(ADJAppStoreSubscription * _Nullable)subscription;
 - (void)updateAttStatusFromUserCallback:(int)newAttStatusFromUser;
 - (void)trackAdRevenue:(ADJAdRevenue * _Nullable)adRevenue;
-- (void)verifyPurchase:(nonnull ADJPurchase *)purchase
-     completionHandler:(void (^_Nonnull)(ADJPurchaseVerificationResult * _Nonnull verificationResult))completionHandler;
-- (void)attributionWithCallback:(nonnull id<ADJAttributionCallback>)attributionCallback;
-- (void)adidWithCallback:(nonnull id<ADJAdidCallback>)adidCallback;
+- (void)verifyAppStorePurchase:(nonnull ADJAppStorePurchase *)purchase
+         withCompletionHandler:(nonnull ADJVerificationResultBlock)completion;
+- (void)attributionWithCompletionHandler:(nonnull ADJAttributionGetterBlock)completion;
+- (void)adidWithCompletionHandler:(nonnull ADJAdidGetterBlock)completion;
 - (void)setCoppaCompliance:(BOOL)isCoppaComplianceEnabled;
-- (void)verifyAndTrack:(nonnull ADJEvent *)event
-     completionHandler:(void (^_Nonnull)(ADJPurchaseVerificationResult * _Nonnull verificationResult))completionHandler;
+- (void)verifyAndTrackAppStorePurchase:(nonnull ADJEvent *)event
+                 withCompletionHandler:(nonnull ADJVerificationResultBlock)completion;
 
 - (ADJPackageParams * _Nullable)packageParams;
 - (ADJActivityState * _Nullable)activityState;
@@ -126,7 +126,7 @@
 
 - (id _Nullable)initWithConfig:(ADJConfig *_Nullable)adjustConfig
                 savedPreLaunch:(ADJSavedPreLaunch * _Nullable)savedPreLaunch
-    deeplinkResolutionCallback:(AdjustResolvedDeeplinkBlock _Nullable)deepLinkResolutionCallback;
+    deeplinkResolutionCallback:(ADJResolvedDeeplinkBlock _Nullable)deepLinkResolutionCallback;
 
 - (void)addGlobalCallbackParameterI:(ADJActivityHandler *_Nonnull)selfI
                               param:(NSString *_Nonnull)param

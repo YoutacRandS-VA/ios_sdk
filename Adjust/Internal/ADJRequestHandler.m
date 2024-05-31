@@ -12,7 +12,7 @@
 #import "ADJAdjustFactory.h"
 #import "ADJPackageBuilder.h"
 #import "ADJActivityPackage.h"
-#import "NSString+ADJAdditions.h"
+#import "ADJAdditions.h"
 #import "ADJUserDefaults.h"
 #include <stdlib.h>
 
@@ -362,8 +362,10 @@ authorizationHeader:(NSString *)authorizationHeader
         return;
     }
 
-    NSString *responseString = [[[NSString alloc]
-                                 initWithData:data encoding:NSUTF8StringEncoding] adjTrim];
+    // NSString *responseString = [[[NSString alloc]
+    //                              initWithData:data encoding:NSUTF8StringEncoding] adjTrim];
+    NSString *responseString = [ADJAdditions adjTrim:[[NSString alloc] initWithData:data
+                                                                           encoding:NSUTF8StringEncoding]];
     NSInteger statusCode = urlResponse.statusCode;
     [self.logger verbose:@"Response: %@", responseString];
 
@@ -478,8 +480,10 @@ authorizationHeader:(NSString *)authorizationHeader
             continue;
         }
         NSString *value = [parameters objectForKey:key];
-        NSString *escapedValue = [value  adjUrlEncode];
-        NSString *escapedKey = [key  adjUrlEncode];
+        // NSString *escapedValue = [value  adjUrlEncode];
+        NSString *escapedValue = [ADJAdditions adjUrlEncode:value];
+        // NSString *escapedKey = [key  adjUrlEncode];
+        NSString *escapedKey = [ADJAdditions adjUrlEncode:key];
         NSString *pair = [NSString stringWithFormat:@"%@=%@", escapedKey, escapedValue];
         [kvArray addObject:pair];
     }

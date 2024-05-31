@@ -1,9 +1,9 @@
 //
-//  AdjustSdkStatic.h
-//  AdjustSdkStatic
+//  AdjustSdk.h
+//  AdjustSdkImStatic
 //
-//  Created by Genady Buchatsky on 12.03.22.
-//  Copyright © 2022 Adjust GmbH. All rights reserved.
+//  Created by Aditi Agrawal on 28/05/24.
+//  Copyright © 2024 Adjust GmbH. All rights reserved.
 //
 
 #import <UIKit/UIKit.h>

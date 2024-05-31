@@ -7,17 +7,13 @@
 //
 
 #import "Adjust.h"
-// In case of erroneous import statement try with:
-// #import <AdjustSdk/Adjust.h>
-// (depends how you import the Adjust SDK to your app)
-
 #import "AdjustBridge.h"
 #import "ADJAdjustFactory.h"
 #import "WKWebViewJavascriptBridge.h"
 
 @interface AdjustBridge() <AdjustDelegate>
 
-@property BOOL openDeferredDeeplink;
+@property BOOL isDeferredDeeplinkOpeningEnabled;
 @property (nonatomic, copy) NSString *fbPixelDefaultEventToken;
 @property (nonatomic, copy) NSString *attributionCallbackName;
 @property (nonatomic, copy) NSString *eventSuccessCallbackName;
@@ -25,53 +21,10 @@
 @property (nonatomic, copy) NSString *sessionSuccessCallbackName;
 @property (nonatomic, copy) NSString *sessionFailureCallbackName;
 @property (nonatomic, copy) NSString *deferredDeeplinkCallbackName;
+@property (nonatomic, copy) NSString *skanUpdatedCallbackName;
 @property (nonatomic, strong) NSMutableDictionary *fbPixelMapping;
-@property (nonatomic, strong) NSMutableArray *urlStrategies;
+@property (nonatomic, strong) NSMutableArray *urlStrategyDomains;
 @property (nonatomic, strong) ADJAttribution *attribution;
-
-@end
-
-@interface ADJAttributionGetter : NSObject<ADJAttributionCallback>
-
-@property (nonatomic, strong) WVJBResponseCallback callback;
-
-@end
-
-@interface ADJIdfaGetter : NSObject<ADJIdfaCallback>
-
-@property (nonatomic, strong) WVJBResponseCallback callback;
-
-@end
-
-@interface ADJIdfvGetter : NSObject<ADJIdfvCallback>
-
-@property (nonatomic, strong) WVJBResponseCallback callback;
-
-@end
-
-@interface ADJSdkVersionGetter : NSObject<ADJSdkVersionCallback>
-
-@property (nonatomic, copy) NSString *sdkPrefix;
-
-@property (nonatomic, strong) WVJBResponseCallback callback;
-
-@end
-
-@interface ADJLastDeeplinkGetter : NSObject<ADJLastDeeplinkCallback>
-
-@property (nonatomic, strong) WVJBResponseCallback callback;
-
-@end
-
-@interface ADJAdidGetter : NSObject<ADJAdidCallback>
-
-@property (nonatomic, strong) WVJBResponseCallback callback;
-
-@end
-
-@interface ADJIsEnabledGetter : NSObject<ADJIsEnabledCallback>
-
-@property (nonatomic, strong) WVJBResponseCallback callback;
 
 @end
 
@@ -86,7 +39,10 @@
     }
 
     _bridgeRegister = nil;
+    self.isDeferredDeeplinkOpeningEnabled = YES;
+
     [self resetAdjustBridge];
+
     return self;
 }
 
@@ -97,6 +53,7 @@
     self.sessionSuccessCallbackName = nil;
     self.sessionFailureCallbackName = nil;
     self.deferredDeeplinkCallbackName = nil;
+    self.skanUpdatedCallbackName = nil;
 }
 
 #pragma mark - AdjustDelegate methods
@@ -190,11 +147,25 @@
     [self.bridgeRegister callHandler:self.sessionFailureCallbackName data:sessionFailureResponseDataDictionary];
 }
 
-- (BOOL)adjustDeeplinkResponse:(NSURL *)deeplink {
+- (BOOL)adjustDeferredDeeplinkReceived:(NSURL *)deeplink {
     if (self.deferredDeeplinkCallbackName) {
         [self.bridgeRegister callHandler:self.deferredDeeplinkCallbackName data:[deeplink absoluteString]];
     }
-    return self.openDeferredDeeplink;
+    return self.isDeferredDeeplinkOpeningEnabled;
+}
+
+- (void)adjustSkanUpdatedWithConversionData:(nonnull NSDictionary<NSString *, NSString *> *)data {
+    if (self.skanUpdatedCallbackName == nil) {
+        return;
+    }
+
+    NSMutableDictionary *skanUpdatedDictionary = [NSMutableDictionary dictionary];
+    [skanUpdatedDictionary setValue:data[@"conversion_value"] forKey:@"conversionValue"];
+    [skanUpdatedDictionary setValue:data[@"coarse_value"] forKey:@"coarseValue"];
+    [skanUpdatedDictionary setValue:data[@"lock_window"] forKey:@"lockWindow"];
+    [skanUpdatedDictionary setValue:data[@"error"] forKey:@"error"];
+
+    [self.bridgeRegister callHandler:self.skanUpdatedCallbackName data:skanUpdatedDictionary];
 }
 
 #pragma mark - Public methods
@@ -217,14 +188,14 @@
 - (void)loadWKWebViewBridge:(WKWebView *)wkWebView
           wkWebViewDelegate:(id<WKNavigationDelegate>)wkWebViewDelegate {
     if (self.bridgeRegister != nil) {
-        // WebViewBridge already loaded.
+        // WebViewBridge already loaded
         return;
     }
 
     _bridgeRegister = [[AdjustBridgeRegister alloc] initWithWKWebView:wkWebView];
     [self.bridgeRegister setWKWebViewDelegate:wkWebViewDelegate];
 
-    [self.bridgeRegister registerHandler:@"adjust_appDidLaunch" handler:^(id data, WVJBResponseCallback responseCallback) {
+    [self.bridgeRegister registerHandler:@"adjust_initSdk" handler:^(id data, WVJBResponseCallback responseCallback) {
         NSString *appToken = [data objectForKey:@"appToken"];
         NSString *environment = [data objectForKey:@"environment"];
         NSString *allowSuppressLogLevel = [data objectForKey:@"allowSuppressLogLevel"];
@@ -233,11 +204,11 @@
         NSString *externalDeviceId = [data objectForKey:@"externalDeviceId"];
         NSString *logLevel = [data objectForKey:@"logLevel"];
         NSNumber *sendInBackground = [data objectForKey:@"sendInBackground"];
-        NSNumber *needsCost = [data objectForKey:@"needsCost"];
-        NSNumber *allowAdServicesInfoReading = [data objectForKey:@"allowAdServicesInfoReading"];
+        NSNumber *isCostDataInAttributionEnabled = [data objectForKey:@"isCostDataInAttributionEnabled"];
+        NSNumber *isAdServicesEnabled = [data objectForKey:@"isAdServicesEnabled"];
         NSNumber *isIdfaReadingAllowed = [data objectForKey:@"isIdfaReadingAllowed"];
         NSNumber *isSkanAttributionHandlingEnabled = [data objectForKey:@"isSkanAttributionHandlingEnabled"];
-        NSNumber *openDeferredDeeplink = [data objectForKey:@"openDeferredDeeplink"];
+        NSNumber *isDeferredDeeplinkOpeningEnabled = [data objectForKey:@"isDeferredDeeplinkOpeningEnabled"];
         NSString *fbPixelDefaultEventToken = [data objectForKey:@"fbPixelDefaultEventToken"];
         id fbPixelMapping = [data objectForKey:@"fbPixelMapping"];
         NSString *attributionCallback = [data objectForKey:@"attributionCallback"];
@@ -246,21 +217,25 @@
         NSString *sessionSuccessCallback = [data objectForKey:@"sessionSuccessCallback"];
         NSString *sessionFailureCallback = [data objectForKey:@"sessionFailureCallback"];
         NSString *deferredDeeplinkCallback = [data objectForKey:@"deferredDeeplinkCallback"];
+        NSString *skanUpdatedCallback = [data objectForKey:@"skanUpdatedCallback"];
         NSNumber *shouldReadDeviceInfoOnce = [data objectForKey:@"shouldReadDeviceInfoOnce"];
         NSNumber *attConsentWaitingSeconds = [data objectForKey:@"attConsentWaitingSeconds"];
         NSNumber *eventDeduplicationIdsMaxSize = [data objectForKey:@"eventDeduplicationIdsMaxSize"];
-        id urlStrategies = [data objectForKey:@"urlStrategies"];
+        id urlStrategyDomains = [data objectForKey:@"urlStrategyDomains"];
         NSNumber *useSubdomains = [data objectForKey:@"useSubdomains"];
         NSNumber *isDataResidency = [data objectForKey:@"isDataResidency"];
 
         ADJConfig *adjustConfig;
         if ([self isFieldValid:allowSuppressLogLevel]) {
-            adjustConfig = [ADJConfig configWithAppToken:appToken environment:environment allowSuppressLogLevel:[allowSuppressLogLevel boolValue]];
+            adjustConfig = [[ADJConfig alloc] initWithAppToken:appToken
+                                                   environment:environment
+                                           andSuppressLogLevel:[allowSuppressLogLevel boolValue]];
         } else {
-            adjustConfig = [ADJConfig configWithAppToken:appToken environment:environment];
+            adjustConfig = [[ADJConfig alloc] initWithAppToken:appToken
+                                                andEnvironment:environment];
         }
 
-        // No need to continue if adjust config is not valid.
+        // no need to continue if adjust config is not valid
         if (![adjustConfig isValid]) {
             return;
         }
@@ -278,13 +253,19 @@
             [adjustConfig setLogLevel:[ADJLogger logLevelFromString:[logLevel lowercaseString]]];
         }
         if ([self isFieldValid:sendInBackground]) {
-            [adjustConfig setSendInBackground:[sendInBackground boolValue]];
+            if ([sendInBackground boolValue] == YES) {
+                [adjustConfig enableSendingInBackground];
+            }
         }
-        if ([self isFieldValid:needsCost]) {
-            [adjustConfig setNeedsCost:[needsCost boolValue]];
+        if ([self isFieldValid:isCostDataInAttributionEnabled]) {
+            if ([isCostDataInAttributionEnabled boolValue] == YES) {
+                [adjustConfig enableCostDataInAttribution];
+            }
         }
-        if ([self isFieldValid:allowAdServicesInfoReading]) {
-            [adjustConfig setAllowAdServicesInfoReading:[allowAdServicesInfoReading boolValue]];
+        if ([self isFieldValid:isAdServicesEnabled]) {
+            if ([isAdServicesEnabled boolValue] == NO) {
+                [adjustConfig disableAdServices];
+            }
         }
         if ([self isFieldValid:isIdfaReadingAllowed]) {
             if ([isIdfaReadingAllowed boolValue] == NO) {
@@ -296,11 +277,11 @@
         }
         if ([self isFieldValid:isSkanAttributionHandlingEnabled]) {
             if ([isSkanAttributionHandlingEnabled boolValue] == NO) {
-                [adjustConfig disableSkanAttributionHandling];
+                [adjustConfig disableSkanAttribution];
             }
         }
-        if ([self isFieldValid:openDeferredDeeplink]) {
-            self.openDeferredDeeplink = [openDeferredDeeplink boolValue];
+        if ([self isFieldValid:isDeferredDeeplinkOpeningEnabled]) {
+            self.isDeferredDeeplinkOpeningEnabled = [isDeferredDeeplinkOpeningEnabled boolValue];
         }
         if ([self isFieldValid:fbPixelDefaultEventToken]) {
             self.fbPixelDefaultEventToken = fbPixelDefaultEventToken;
@@ -331,56 +312,58 @@
         if ([self isFieldValid:deferredDeeplinkCallback]) {
             self.deferredDeeplinkCallbackName = deferredDeeplinkCallback;
         }
+        if ([self isFieldValid:skanUpdatedCallback]) {
+            self.skanUpdatedCallbackName = skanUpdatedCallback;
+        }
 
-        // Set self as delegate if any callback is configured.
-        // Change to swizzle the methods in the future.
+        // set self as delegate if any callback is configured
+        // change to swizzle the methods in the future
         if (self.attributionCallbackName != nil
             || self.eventSuccessCallbackName != nil
             || self.eventFailureCallbackName != nil
             || self.sessionSuccessCallbackName != nil
             || self.sessionFailureCallbackName != nil
-            || self.deferredDeeplinkCallbackName != nil) {
+            || self.deferredDeeplinkCallbackName != nil
+            || self.skanUpdatedCallbackName != nil) {
             [adjustConfig setDelegate:self];
         }
         if ([self isFieldValid:shouldReadDeviceInfoOnce]) {
             if ([shouldReadDeviceInfoOnce boolValue] == YES) {
-                [adjustConfig readDeviceIdsOnce];
+                [adjustConfig enableDeviceIdsReadingOnce];
             }
         }
         if ([self isFieldValid:eventDeduplicationIdsMaxSize]) {
             [adjustConfig setEventDeduplicationIdsMaxSize:[eventDeduplicationIdsMaxSize integerValue]];
         }
 
-        // URL strategies
-        if (urlStrategies != nil && [urlStrategies count] > 0) {
-            self.urlStrategies = [[NSMutableArray alloc] initWithCapacity:[urlStrategies count]];
-            for (int i = 0; i < [urlStrategies count]; i += 1) {
-                NSString *domain = [[urlStrategies objectAtIndex:i] description];
-                [self.urlStrategies addObject:domain];
+        // URL strategy
+        if (urlStrategyDomains != nil && [urlStrategyDomains count] > 0) {
+            self.urlStrategyDomains = [[NSMutableArray alloc] initWithCapacity:[urlStrategyDomains count]];
+            for (int i = 0; i < [urlStrategyDomains count]; i += 1) {
+                NSString *domain = [[urlStrategyDomains objectAtIndex:i] description];
+                [self.urlStrategyDomains addObject:domain];
             }
         }
         if ([self isFieldValid:useSubdomains] && [self isFieldValid:isDataResidency]) {
-            [adjustConfig setUrlStrategyDomains:(NSArray *)self.urlStrategies
-                                 withSubdomains:[useSubdomains boolValue]
-                                isDataResidency:[isDataResidency boolValue]];
+            [adjustConfig setUrlStrategy:(NSArray *)self.urlStrategyDomains
+                          withSubdomains:[useSubdomains boolValue]
+                        andDataResidency:[isDataResidency boolValue]];
         }
 
-        [Adjust appDidLaunch:adjustConfig];
-        [Adjust trackSubsessionStart];
+        [Adjust initSdk:adjustConfig];
     }];
 
     [self.bridgeRegister registerHandler:@"adjust_trackEvent" handler:^(id data, WVJBResponseCallback responseCallback) {
         NSString *eventToken = [data objectForKey:@"eventToken"];
         NSString *revenue = [data objectForKey:@"revenue"];
         NSString *currency = [data objectForKey:@"currency"];
-        NSString *transactionId = [data objectForKey:@"transactionId"];
         NSString *deduplicationId = [data objectForKey:@"deduplicationId"];
+        NSString *callbackId = [data objectForKey:@"callbackId"];
         id callbackParameters = [data objectForKey:@"callbackParameters"];
         id partnerParameters = [data objectForKey:@"partnerParameters"];
-        NSString *callbackId = [data objectForKey:@"callbackId"];
 
-        ADJEvent *adjustEvent = [ADJEvent eventWithEventToken:eventToken];
-        // No need to continue if adjust event is not valid
+        ADJEvent *adjustEvent = [[ADJEvent alloc] initWithEventToken:eventToken];
+        // no need to continue if adjust event is not valid
         if (![adjustEvent isValid]) {
             return;
         }
@@ -389,11 +372,11 @@
             double revenueValue = [revenue doubleValue];
             [adjustEvent setRevenue:revenueValue currency:currency];
         }
-        if ([self isFieldValid:transactionId]) {
-            [adjustEvent setTransactionId:transactionId];
-        }
         if ([self isFieldValid:deduplicationId]) {
             [adjustEvent setDeduplicationId:deduplicationId];
+        }
+        if ([self isFieldValid:callbackId]) {
+            [adjustEvent setCallbackId:callbackId];
         }
         for (int i = 0; i < [callbackParameters count]; i += 2) {
             NSString *key = [[callbackParameters objectAtIndex:i] description];
@@ -404,9 +387,6 @@
             NSString *key = [[partnerParameters objectAtIndex:i] description];
             NSString *value = [[partnerParameters objectAtIndex:(i + 1)] description];
             [adjustEvent addPartnerParameter:key value:value];
-        }
-        if ([self isFieldValid:callbackId]) {
-            [adjustEvent setCallbackId:callbackId];
         }
 
         [Adjust trackEvent:adjustEvent];
@@ -420,28 +400,30 @@
         [Adjust trackSubsessionEnd];
     }];
 
-    [self.bridgeRegister registerHandler:@"adjust_setEnabled" handler:^(id data, WVJBResponseCallback responseCallback) {
-        if (![data isKindOfClass:[NSNumber class]]) {
-            return;
-        }
-        [Adjust setEnabled:[(NSNumber *)data boolValue]];
+    [self.bridgeRegister registerHandler:@"adjust_enable" handler:^(id data, WVJBResponseCallback responseCallback) {
+        [Adjust enable];
+    }];
+
+    [self.bridgeRegister registerHandler:@"adjust_disable" handler:^(id data, WVJBResponseCallback responseCallback) {
+        [Adjust disable];
     }];
 
     [self.bridgeRegister registerHandler:@"adjust_isEnabled" handler:^(id data, WVJBResponseCallback responseCallback) {
         if (responseCallback == nil) {
             return;
         }
-
-        ADJIsEnabledGetter * _Nonnull isEnabledGetter = [[ADJIsEnabledGetter alloc] init];
-        isEnabledGetter.callback = responseCallback;
-        [Adjust isEnabledWithCallback:isEnabledGetter];
+        __block WVJBResponseCallback localResponseCallback = responseCallback;
+        [Adjust isEnabledWithCompletionHandler:^(BOOL isEnabled) {
+            localResponseCallback([NSNumber numberWithBool:isEnabled]);
+        }];
     }];
 
-    [self.bridgeRegister registerHandler:@"adjust_setOfflineMode" handler:^(id data, WVJBResponseCallback responseCallback) {
-        if (![data isKindOfClass:[NSNumber class]]) {
-            return;
-        }
-        [Adjust setOfflineMode:[(NSNumber *)data boolValue]];
+    [self.bridgeRegister registerHandler:@"adjust_switchToOfflineMode" handler:^(id data, WVJBResponseCallback responseCallback) {
+        [Adjust switchToOfflineMode];
+    }];
+
+    [self.bridgeRegister registerHandler:@"adjust_switchBackToOnlineMode" handler:^(id data, WVJBResponseCallback responseCallback) {
+        [Adjust switchBackToOnlineMode];
     }];
 
     [self.bridgeRegister registerHandler:@"adjust_sdkVersion" handler:^(id data, WVJBResponseCallback responseCallback) {
@@ -449,10 +431,12 @@
             return;
         }
 
-        ADJSdkVersionGetter * _Nonnull sdkVersionGetter = [[ADJSdkVersionGetter alloc] init];
-        sdkVersionGetter.sdkPrefix = (NSString *)data;
-        sdkVersionGetter.callback = responseCallback;
-        [Adjust sdkVersionWithCallback:sdkVersionGetter];
+        __block NSString *_Nullable localSdkPrefix = (NSString *)data;
+        __block WVJBResponseCallback localResponseCallback = responseCallback;
+        [Adjust sdkVersionWithCompletionHandler:^(NSString * _Nullable sdkVersion) {
+            NSString *joinedSdkVersion = [NSString stringWithFormat:@"%@@%@", localSdkPrefix, sdkVersion];
+            localResponseCallback(joinedSdkVersion);
+        }];
     }];
 
     [self.bridgeRegister registerHandler:@"adjust_idfa" handler:^(id data, WVJBResponseCallback responseCallback) {
@@ -460,9 +444,10 @@
             return;
         }
 
-        ADJIdfaGetter * _Nonnull idfaGetter = [[ADJIdfaGetter alloc] init];
-        idfaGetter.callback = responseCallback;
-        [Adjust idfaWithCallback:idfaGetter];
+        __block WVJBResponseCallback localResponseCallback = responseCallback;
+        [Adjust idfaWithCompletionHandler:^(NSString * _Nullable idfa) {
+            localResponseCallback(idfa);
+        }];
     }];
 
     [self.bridgeRegister registerHandler:@"adjust_idfv" handler:^(id data, WVJBResponseCallback responseCallback) {
@@ -470,9 +455,10 @@
             return;
         }
 
-        ADJIdfvGetter * _Nonnull idfvGetter = [[ADJIdfvGetter alloc] init];
-        idfvGetter.callback = responseCallback;
-        [Adjust idfvWithCallback:idfvGetter];
+        __block WVJBResponseCallback localResponseCallback = responseCallback;
+        [Adjust idfvWithCompletionHandler:^(NSString * _Nullable idfv) {
+            localResponseCallback(idfv);
+        }];
     }];
 
     [self.bridgeRegister registerHandler:@"adjust_requestAppTrackingAuthorizationWithCompletionHandler" handler:^(id data, WVJBResponseCallback responseCallback) {
@@ -501,7 +487,7 @@
         [Adjust updateSkanConversionValue:[conversionValue integerValue]
                               coarseValue:coarseValue
                                lockWindow:lockWindow
-                        completionHandler:^(NSError * _Nullable error) {
+                    withCompletionHandler:^(NSError * _Nullable error){
             if (error != nil) {
                 responseCallback([NSString stringWithFormat:@"%@", error]);
             }
@@ -513,9 +499,10 @@
             return;
         }
 
-        ADJAdidGetter * _Nonnull adidGetter = [[ADJAdidGetter alloc] init];
-        adidGetter.callback = responseCallback;
-        [Adjust adidWithCallback:adidGetter];
+        __block WVJBResponseCallback localResponseCallback = responseCallback;
+        [Adjust adidWithCompletionHandler:^(NSString * _Nullable adid) {
+            localResponseCallback(adid);
+        }];
     }];
 
     [self.bridgeRegister registerHandler:@"adjust_attribution" handler:^(id data, WVJBResponseCallback responseCallback) {
@@ -523,9 +510,14 @@
             return;
         }
 
-        ADJAttributionGetter * _Nonnull attributionGetter = [[ADJAttributionGetter alloc] init];
-        attributionGetter.callback = responseCallback;
-        [Adjust attributionWithCallback:attributionGetter];
+        __block WVJBResponseCallback localResponseCallback = responseCallback;
+        [Adjust attributionWithCompletionHandler:^(ADJAttribution * _Nullable attribution) {
+            NSDictionary *attributionDictionary = nil;
+            if (attribution != nil) {
+                attributionDictionary = [attribution dictionary];
+            }
+            localResponseCallback(attributionDictionary);
+        }];
     }];
 
     [self.bridgeRegister registerHandler:@"adjust_addGlobalCallbackParameter" handler:^(id data, WVJBResponseCallback responseCallback) {
@@ -576,7 +568,7 @@
             isEnabled = (NSNumber *)isEnabledO;
         }
         ADJThirdPartySharing *adjustThirdPartySharing =
-        [[ADJThirdPartySharing alloc] initWithIsEnabledNumberBool:isEnabled];
+        [[ADJThirdPartySharing alloc] initWithIsEnabled:isEnabled];
         for (int i = 0; i < [granularOptions count]; i += 3) {
             NSString *partnerName = [[granularOptions objectAtIndex:i] description];
             NSString *key = [[granularOptions objectAtIndex:(i + 1)] description];
@@ -600,28 +592,20 @@
         [Adjust trackMeasurementConsent:[(NSNumber *)data boolValue]];
     }];
 
-    [self.bridgeRegister registerHandler:@"adjust_lastDeeplink" handler:^(id data, WVJBResponseCallback responseCallback) {
+    [self.bridgeRegister registerHandler:@"adjust_enableCoppaCompliance"
+                                 handler:^(id data, WVJBResponseCallback responseCallback) {
         if (responseCallback == nil) {
             return;
         }
-
-        ADJLastDeeplinkGetter * _Nonnull lastDeeplinkGetter = [[ADJLastDeeplinkGetter alloc] init];
-        lastDeeplinkGetter.callback = responseCallback;
-        [Adjust lastDeeplinkWithCallback:lastDeeplinkGetter];
-    }];
-
-    [self.bridgeRegister registerHandler:@"adjust_enableCoppaCompliance"
-                                 handler:^(id data, WVJBResponseCallback responseCallback)
-     {
-        if (responseCallback == nil) { return; }
 
         [Adjust enableCoppaCompliance];
     }];
 
     [self.bridgeRegister registerHandler:@"adjust_disableCoppaCompliance"
-                                 handler:^(id data, WVJBResponseCallback responseCallback)
-     {
-        if (responseCallback == nil) { return; }
+                                 handler:^(id data, WVJBResponseCallback responseCallback) {
+        if (responseCallback == nil) {
+            return;
+        }
 
         [Adjust disableCoppaCompliance];
     }];
@@ -684,7 +668,6 @@
 
         [Adjust setTestOptions:testOptions];
     }];
-
 }
 
 - (void)registerAugmentedView {
@@ -705,7 +688,7 @@
             return;
         }
 
-        ADJEvent *fbPixelEvent = [ADJEvent eventWithEventToken:eventToken];
+        ADJEvent *fbPixelEvent = [[ADJEvent alloc] initWithEventToken:eventToken];
         if (![fbPixelEvent isValid]) {
             return;
         }
@@ -788,80 +771,6 @@
     }
     NSNumberFormatter *formatString = [[NSNumberFormatter alloc] init];
     return [formatString numberFromString:[field description]];
-}
-
-@end
-
-#pragma mark - ADJAttributionCallback protocol
-
-@implementation ADJAttributionGetter
-
-- (void)didReadWithAdjustAttribution:(nonnull ADJAttribution *)attribution {
-    NSDictionary *attributionDictionary = nil;
-    if (attribution != nil) {
-        attributionDictionary = [attribution dictionary];
-    }
-
-    self.callback(attributionDictionary);
-}
-
-@end
-
-#pragma mark - ADJIdfaCallback protocol
-
-@implementation ADJIdfaGetter
-
-- (void)didReadWithIdfa:(nullable NSString *)idfa {
-    self.callback(idfa);
-}
-
-@end
-
-#pragma mark - ADJIdfvCallback protocol
-
-@implementation ADJIdfvGetter
-
-- (void)didReadWithIdfv:(nullable NSString *)idfv {
-    self.callback(idfv);
-}
-
-@end
-
-#pragma mark - ADJSdkVersionCallback protocol
-
-@implementation ADJSdkVersionGetter
-
-- (void)didReadWithSdkVersion:(NSString *)sdkVersion {
-    NSString *joinedSdkVersion = [NSString stringWithFormat:@"%@@%@", self.sdkPrefix, sdkVersion];
-    self.callback(joinedSdkVersion);
-}
-
-@end
-
-#pragma mark - ADJLastDeeplinkCallback protocol
-
-@implementation ADJLastDeeplinkGetter
-
-- (void)didReadWithLastDeeplink:(NSURL *)lastDeeplink {
-    self.callback(lastDeeplink != nil ? [lastDeeplink absoluteString] : nil);
-}
-
-@end
-
-#pragma mark - ADJAdidCallback protocol
-@implementation ADJAdidGetter
-
-- (void)didReadWithAdid:(NSString *)adid {
-    self.callback(adid);
-}
-
-@end
-
-#pragma mark - ADJIsEnabledCallback protocol
-@implementation ADJIsEnabledGetter
-
-- (void)didReadWithIsEnabled:(BOOL)isEnabled {
-    self.callback([NSNumber numberWithBool:isEnabled]);
 }
 
 @end

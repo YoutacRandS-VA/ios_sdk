@@ -72,35 +72,38 @@
 }
 
 - (IBAction)clickEnableOfflineMode:(id)sender {
-    [Adjust setOfflineMode:YES];
+    [Adjust switchToOfflineMode];
 }
 
 - (IBAction)clickDisableOfflineMode:(id)sender {
-    [Adjust setOfflineMode:NO];
+    [Adjust switchBackToOnlineMode];
 }
 
 - (IBAction)clickEnableSdk:(id)sender {
-    [Adjust setEnabled:YES];
+    [Adjust enable];
 }
 
 - (IBAction)clickDisableSdk:(id)sender {
-    [Adjust setEnabled:NO];
+    [Adjust disable];
 }
 
 - (IBAction)clickIsSdkEnabled:(id)sender {
-    NSString *message;
-    if ([Adjust isEnabled]) {
-        message = @"SDK is ENABLED!";
-    } else {
-        message = @"SDK is DISABLED!";
-    }
-    
-    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Is SDK Enabled?"
-                                                                   message:message preferredStyle:UIAlertControllerStyleAlert];
-    UIAlertAction *defaultAction = [UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault
-                                                          handler:^(UIAlertAction *action) {}];
-    [alert addAction:defaultAction];
-    [self presentViewController:alert animated:YES completion:nil];
+    [Adjust isEnabledWithCompletionHandler:^(BOOL isEnabled) {
+        NSString *message;
+        if (isEnabled) {
+            message = @"SDK is ENABLED!";
+        } else {
+            message = @"SDK is DISABLED!";
+        }
+
+        UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Is SDK Enabled?"
+                                                                       message:message
+                                                                preferredStyle:UIAlertControllerStyleAlert];
+        UIAlertAction *defaultAction = [UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault
+                                                              handler:^(UIAlertAction *action) {}];
+        [alert addAction:defaultAction];
+        [self presentViewController:alert animated:YES completion:nil];
+    }];
 }
 
 @end

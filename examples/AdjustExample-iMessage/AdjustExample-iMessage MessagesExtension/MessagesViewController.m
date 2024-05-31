@@ -25,8 +25,9 @@
         // Configure adjust SDK.
         NSString *yourAppToken = @"2fm9gkqubvpc";
         NSString *environment = ADJEnvironmentSandbox;
-        ADJConfig *adjustConfig = [ADJConfig configWithAppToken:yourAppToken environment:environment];
-        
+        ADJConfig *adjustConfig = [[ADJConfig alloc] initWithAppToken:yourAppToken
+                                                       andEnvironment:environment];
+
         // Change the log level.
         [adjustConfig setLogLevel:ADJLogLevelVerbose];
         
@@ -44,14 +45,8 @@
         // Remove global partner parameter.
         [Adjust removeGlobalPartnerParameterForKey:@"sp_foo"];
 
-        // Remove all global callback parameters.
-        // [Adjust removeGlobalCallbackParameters];
-
-        // Remove all global partner parameters.
-        // [Adjust removeGlobalPartnerParameters];
-
         // Initialise the SDK.
-        [Adjust appDidLaunch:adjustConfig];
+        [Adjust initSdk:adjustConfig];
     });
 }
 
@@ -112,7 +107,7 @@
 }
 
 - (IBAction)clickTrackSimpleEvent:(id)sender {
-    ADJEvent *event = [ADJEvent eventWithEventToken:@"g3mfiw"];
+    ADJEvent *event = [[ADJEvent alloc] initWithEventToken:@"g3mfiw"];
     [Adjust trackEvent:event];
 }
 

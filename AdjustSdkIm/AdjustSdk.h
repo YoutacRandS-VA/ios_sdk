@@ -1,12 +1,20 @@
 //
-//  AdjustSdkStatic.h
-//  AdjustSdkStatic
+//  AdjustSdk.h
+//  AdjustSdkIm
 //
-//  Created by Genady Buchatsky on 12.03.22.
-//  Copyright © 2022 Adjust GmbH. All rights reserved.
+//  Created by Aditi Agrawal on 28/05/24.
+//  Copyright © 2024 Adjust GmbH. All rights reserved.
 //
 
 #import <UIKit/UIKit.h>
+
+//! Project version number for AdjustSdk.
+FOUNDATION_EXPORT double AdjustSdkVersionNumber;
+
+//! Project version string for AdjustSdk.
+FOUNDATION_EXPORT const unsigned char AdjustSdkVersionString[];
+
+// In this header, you should import all the public headers of your framework using statements like #import <AdjustSdk/PublicHeader.h>
 
 #import <AdjustSdk/Adjust.h>
 #import <AdjustSdk/ADJEvent.h>

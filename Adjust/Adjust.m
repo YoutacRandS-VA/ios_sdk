@@ -31,7 +31,7 @@ NSString * const ADJEnvironmentProduction = @"production";
 
 @property (nonatomic, strong) ADJSavedPreLaunch *savedPreLaunch;
 
-@property (nonatomic) AdjustResolvedDeeplinkBlock cachedResolvedDeeplinkBlock;
+@property (nonatomic) ADJResolvedDeeplinkBlock cachedResolvedDeeplinkBlock;
 
 @end
 
@@ -64,9 +64,9 @@ static dispatch_once_t onceToken = 0;
 
 #pragma mark - Public static methods
 
-+ (void)appDidLaunch:(ADJConfig *)adjustConfig {
++ (void)initSdk:(ADJConfig *)adjustConfig {
     @synchronized (self) {
-        [[Adjust getInstance] appDidLaunch:adjustConfig];
+        [[Adjust getInstance] initSdk:adjustConfig];
     }
 }
 
@@ -88,16 +88,23 @@ static dispatch_once_t onceToken = 0;
     }
 }
 
-+ (void)setEnabled:(BOOL)enabled {
++ (void)enable {
     @synchronized (self) {
         Adjust *instance = [Adjust getInstance];
-        [instance setEnabled:enabled];
+        [instance enable];
     }
 }
 
-+ (void)isEnabledWithCallback:(nonnull id<ADJIsEnabledCallback>)isEnabledCallback {
++ (void)disable {
     @synchronized (self) {
-        [[Adjust getInstance] isEnabledWithCallback:isEnabledCallback];
+        Adjust *instance = [Adjust getInstance];
+        [instance disable];
+    }
+}
+
++ (void)isEnabledWithCompletionHandler:(nonnull ADJIsEnabledGetterBlock)completion {
+    @synchronized (self) {
+        [[Adjust getInstance] isEnabledWithCompletionHandler:completion];
     }
 }
 
@@ -108,9 +115,10 @@ static dispatch_once_t onceToken = 0;
 }
 
 + (void)processAndResolveDeeplink:(nonnull NSURL *)deeplink
-                completionHandler:(void (^_Nonnull)(NSString * _Nonnull resolvedLink))completionHandler {
+            withCompletionHandler:(nonnull ADJResolvedDeeplinkBlock)completion {
     @synchronized (self) {
-        [[Adjust getInstance] processAndResolveDeeplink:deeplink completionHandler:completionHandler];
+        [[Adjust getInstance] processAndResolveDeeplink:deeplink
+                                  withCompletionHandler:completion];
     }
 }
 
@@ -126,27 +134,33 @@ static dispatch_once_t onceToken = 0;
     }
 }
 
-+ (void)setOfflineMode:(BOOL)enabled {
++ (void)switchToOfflineMode {
     @synchronized (self) {
-        [[Adjust getInstance] setOfflineMode:enabled];
+        [[Adjust getInstance] switchToOfflineMode];
     }
 }
 
-+ (void)idfaWithCallback:(nonnull id<ADJIdfaCallback>)idfaCallback {
++ (void)switchBackToOnlineMode {
     @synchronized (self) {
-        [[Adjust getInstance] idfaWithCallback:idfaCallback];
+        [[Adjust getInstance] switchBackToOnlineMode];
     }
 }
 
-+ (void)idfvWithCallback:(nonnull id<ADJIdfvCallback>)idfvCallback {
++ (void)idfaWithCompletionHandler:(nonnull ADJIdfaGetterBlock)completion {
     @synchronized (self) {
-        [[Adjust getInstance] idfvWithCallback:idfvCallback];
+        [[Adjust getInstance] idfaWithCompletionHandler:completion];
     }
 }
 
-+ (void)sdkVersionWithCallback:(nonnull id<ADJSdkVersionCallback>)sdkVersionCallback {
++ (void)idfvWithCompletionHandler:(nonnull ADJIdfvGetterBlock)completion {
     @synchronized (self) {
-        [[Adjust getInstance] sdkVersionWithCallback:sdkVersionCallback];
+        [[Adjust getInstance] idfvWithCompletionHandler:completion];
+    }
+}
+
++ (void)sdkVersionWithCompletionHandler:(nonnull ADJSdkVersionGetterBlock)completion {
+    @synchronized (self) {
+        [[Adjust getInstance] sdkVersionWithCompletionHandler:completion];
     }
 }
 
@@ -231,12 +245,12 @@ static dispatch_once_t onceToken = 0;
 + (void)updateSkanConversionValue:(NSInteger)conversionValue
                       coarseValue:(nullable NSString *)coarseValue
                        lockWindow:(nullable NSNumber *)lockWindow
-                completionHandler:(void (^_Nullable)(NSError *_Nullable error))completion {
+            withCompletionHandler:(void (^_Nullable)(NSError *_Nullable error))completion {
     @synchronized (self) {
         [[Adjust getInstance] updateSkanConversionValue:conversionValue
                                             coarseValue:coarseValue
                                              lockWindow:lockWindow
-                                      completionHandler:completion];
+                                  withCompletionHandler:completion];
     }
 }
 
@@ -246,28 +260,29 @@ static dispatch_once_t onceToken = 0;
     }
 }
 
-+ (void)attributionWithCallback:(nonnull id<ADJAttributionCallback>)attributionCallback {
++ (void)attributionWithCompletionHandler:(nonnull ADJAttributionGetterBlock)completion {
     @synchronized (self) {
-        [[Adjust getInstance] attributionWithCallback:attributionCallback];
+        [[Adjust getInstance] attributionWithCompletionHandler:completion];
     }
 }
 
-+ (void)adidWithCallback:(id<ADJAdidCallback>)adidCallback {
++ (void)adidWithCompletionHandler:(nonnull ADJAdidGetterBlock)completion {
     @synchronized (self) {
-        [[Adjust getInstance] adidWithCallback:adidCallback];
+        [[Adjust getInstance] adidWithCompletionHandler:completion];
     }
 }
 
-+ (void)lastDeeplinkWithCallback:(nonnull id<ADJLastDeeplinkCallback>)lastDeeplinkCallback {
++ (void)lastDeeplinkWithCompletionHandler:(nonnull ADJLastDeeplinkGetterBlock)completion {
     @synchronized (self) {
-        [[Adjust getInstance] lastDeeplinkWithCallback:lastDeeplinkCallback];
+        [[Adjust getInstance] lastDeeplinkWithCompletionHandler:completion];
     }
 }
 
-+ (void)verifyPurchase:(nonnull ADJPurchase *)purchase
-     completionHandler:(void (^_Nonnull)(ADJPurchaseVerificationResult * _Nonnull verificationResult))completionHandler {
++ (void)verifyAppStorePurchase:(nonnull ADJAppStorePurchase *)purchase
+         withCompletionHandler:(nonnull ADJVerificationResultBlock)completion {
     @synchronized (self) {
-        [[Adjust getInstance] verifyPurchase:purchase completionHandler:completionHandler];
+        [[Adjust getInstance] verifyAppStorePurchase:purchase
+                               withCompletionHandler:completion];
     }
 }
 
@@ -279,10 +294,11 @@ static dispatch_once_t onceToken = 0;
     [[Adjust getInstance] disableCoppaCompliance];
 }
 
-+ (void)verifyAndTrack:(nonnull ADJEvent *)event
-     completionHandler:(void (^_Nonnull)(ADJPurchaseVerificationResult * _Nonnull verificationResult))completionHandler {
++ (void)verifyAndTrackAppStorePurchase:(nonnull ADJEvent *)event
+                 withCompletionHandler:(void (^_Nonnull)(ADJPurchaseVerificationResult * _Nonnull verificationResult))completion {
     @synchronized (self) {
-        [[Adjust getInstance] verifyAndTrack:event completionHandler:completionHandler];
+        [[Adjust getInstance] verifyAndTrackAppStorePurchase:event
+                                       withCompletionHandler:completion];
     }
 }
 
@@ -302,7 +318,7 @@ static dispatch_once_t onceToken = 0;
 
 #pragma mark - Public instance methods
 
-- (void)appDidLaunch:(ADJConfig *)adjustConfig {
+- (void)initSdk:(ADJConfig *)adjustConfig {
     if (self.activityHandler != nil) {
         [self.logger error:@"Adjust already initialized"];
         return;
@@ -333,26 +349,37 @@ static dispatch_once_t onceToken = 0;
     [self.activityHandler applicationWillResignActive];
 }
 
-- (void)setEnabled:(BOOL)enabled {
-    self.savedPreLaunch.enabled = [NSNumber numberWithBool:enabled];
+- (void)enable {
+    self.savedPreLaunch.enabled = @YES;
 
-    if ([self checkActivityHandler:enabled
+    if ([self checkActivityHandler:YES
                        trueMessage:@"enabled mode"
                       falseMessage:@"disabled mode"]) {
-        [self.activityHandler setEnabled:enabled];
+        [self.activityHandler setEnabled:YES];
     }
 }
 
-- (void)isEnabledWithCallback:(nonnull id<ADJIsEnabledCallback>)isEnabledCallback {
+- (void)disable {
+    self.savedPreLaunch.enabled = @NO;
+
+    if ([self checkActivityHandler:NO
+                       trueMessage:@"enabled mode"
+                      falseMessage:@"disabled mode"]) {
+        [self.activityHandler setEnabled:NO];
+    }
+}
+
+- (void)isEnabledWithCompletionHandler:(nonnull ADJIsEnabledGetterBlock)completion {
     if (![self checkActivityHandler]) {
         [ADJUtil isEnabledFromActivityStateFile:^(BOOL isEnabled) {
+            __block ADJIsEnabledGetterBlock localIsEnabledCallback = completion;
             [ADJUtil launchInMainThread:^{
-                [isEnabledCallback didReadWithIsEnabled:isEnabled];
+                localIsEnabledCallback(isEnabled);
             }];
         }];
         return;
     }
-    [self.activityHandler isEnabledWithCallback:isEnabledCallback];
+    [self.activityHandler isEnabledWithCompletionHandler:completion];
 }
 
 - (void)processDeeplink:(NSURL *)deeplink {
@@ -366,9 +393,9 @@ static dispatch_once_t onceToken = 0;
 }
 
 - (void)processAndResolveDeeplink:(nonnull NSURL *)deeplink
-                completionHandler:(void (^_Nonnull)(NSString * _Nonnull resolvedLink))completionHandler {
+            withCompletionHandler:(nonnull ADJResolvedDeeplinkBlock)completion {
     // if resolution result is not wanted, fallback to default method
-    if (completionHandler == nil) {
+    if (completion == nil) {
         [self processDeeplink:deeplink];
         return;
     }
@@ -377,13 +404,13 @@ static dispatch_once_t onceToken = 0;
     NSDate *clickTime = [NSDate date];
     if (![self checkActivityHandler]) {
         [ADJUserDefaults saveDeeplinkUrl:deeplink andClickTime:clickTime];
-        self.cachedResolvedDeeplinkBlock = completionHandler;
+        self.cachedResolvedDeeplinkBlock = completion;
         return;
     }
     // if deep link processing was triggered with SDK being initialized
     [self.activityHandler processAndResolveDeeplink:deeplink
                                           clickTime:clickTime
-                                  completionHandler:completionHandler];
+                              withCompletionHandler:completion];
 }
 
 - (void)setPushToken:(NSData *)pushToken {
@@ -402,37 +429,49 @@ static dispatch_once_t onceToken = 0;
     }
 }
 
-- (void)setOfflineMode:(BOOL)enabled {
-    if (![self checkActivityHandler:enabled
+- (void)switchToOfflineMode {
+    if (![self checkActivityHandler:YES
                         trueMessage:@"offline mode"
                        falseMessage:@"online mode"]) {
-        self.savedPreLaunch.offline = enabled;
+        self.savedPreLaunch.offline = YES;
     } else {
-        [self.activityHandler setOfflineMode:enabled];
+        [self.activityHandler setOfflineMode:YES];
     }
 }
 
-- (void)idfaWithCallback:(nonnull id<ADJIdfaCallback>)idfaCallback {
-    if (idfaCallback == nil) {
-        [self.logger error:@"Callback for getting IDFA can't be null"];
+- (void)switchBackToOnlineMode {
+    if (![self checkActivityHandler:NO
+                        trueMessage:@"offline mode"
+                       falseMessage:@"online mode"]) {
+        self.savedPreLaunch.offline = NO;
+    } else {
+        [self.activityHandler setOfflineMode:NO];
+    }
+}
+
+- (void)idfaWithCompletionHandler:(nonnull ADJIdfaGetterBlock)completion {
+    if (completion == nil) {
+        [self.logger error:@"Completion block for getting IDFA can't be null"];
         return;
     }
 
     NSString *idfa = [ADJUtil idfa];
+    __block ADJIdfaGetterBlock localIdfaCallback = completion;
     [ADJUtil launchInMainThread:^{
-        [idfaCallback didReadWithIdfa:idfa];
+        localIdfaCallback(idfa);
     }];
 }
 
-- (void)idfvWithCallback:(nonnull id<ADJIdfvCallback>)idfvCallback {
-    if (idfvCallback == nil) {
-        [self.logger error:@"Callback for getting IDFV can't be null"];
+- (void)idfvWithCompletionHandler:(nonnull ADJIdfvGetterBlock)completion {
+    if (completion == nil) {
+        [self.logger error:@"Completion block for getting IDFV can't be null"];
         return;
     }
 
     NSString *idfv = [ADJUtil idfv];
+    __block ADJIdfaGetterBlock localIdfvCallback = completion;
     [ADJUtil launchInMainThread:^{
-        [idfvCallback didReadWithIdfv:idfv];
+        localIdfvCallback(idfv);
     }];
 }
 
@@ -576,12 +615,11 @@ static dispatch_once_t onceToken = 0;
 - (void)updateSkanConversionValue:(NSInteger)conversionValue
                       coarseValue:(nullable NSString *)coarseValue
                        lockWindow:(nullable NSNumber *)lockWindow
-                completionHandler:(void (^_Nullable)(NSError *_Nullable error))completion {
-    
+            withCompletionHandler:(void (^_Nullable)(NSError *_Nullable error))completion {
     [[ADJSKAdNetwork getInstance] updateConversionValue:conversionValue
                                             coarseValue:coarseValue
                                              lockWindow:lockWindow
-                                      completionHandler:completion];
+                                  withCompletionHandler:completion];
 }
 
 - (void)trackAdRevenue:(ADJAdRevenue *)adRevenue {
@@ -591,9 +629,9 @@ static dispatch_once_t onceToken = 0;
     [self.activityHandler trackAdRevenue:adRevenue];
 }
 
-- (void)attributionWithCallback:(nonnull id<ADJAttributionCallback>)attributionCallback {
-    if (attributionCallback == nil) {
-        [self.logger error:@"Callback for getting attribution can't be null"];
+- (void)attributionWithCompletionHandler:(nonnull ADJAttributionGetterBlock)completion {
+    if (completion == nil) {
+        [self.logger error:@"Completion block for getting attribution can't be null"];
         return;
     }
 
@@ -602,15 +640,15 @@ static dispatch_once_t onceToken = 0;
             self.savedPreLaunch.cachedAttributionReadCallbacksArray = [NSMutableArray array];
         }
 
-        [self.savedPreLaunch.cachedAttributionReadCallbacksArray addObject:attributionCallback];
+        [self.savedPreLaunch.cachedAttributionReadCallbacksArray addObject:completion];
         return;
     }
-    return [self.activityHandler attributionWithCallback:attributionCallback];
+    return [self.activityHandler attributionWithCompletionHandler:completion];
 }
 
-- (void)adidWithCallback:(id<ADJAdidCallback>)adidCallback {
-    if (adidCallback == nil) {
-        [self.logger error:@"Callback for getting adid can't be null"];
+- (void)adidWithCompletionHandler:(nonnull ADJAdidGetterBlock)completion {
+    if (completion == nil) {
+        [self.logger error:@"Completion block for getting adid can't be null"];
         return;
     }
 
@@ -619,49 +657,52 @@ static dispatch_once_t onceToken = 0;
             self.savedPreLaunch.cachedAdidReadCallbacksArray = [NSMutableArray array];
         }
 
-        [self.savedPreLaunch.cachedAdidReadCallbacksArray addObject:adidCallback];
+        [self.savedPreLaunch.cachedAdidReadCallbacksArray addObject:completion];
         return;
     }
-    return [self.activityHandler adidWithCallback:adidCallback];
+    return [self.activityHandler adidWithCompletionHandler:completion];
 }
 
-- (void)sdkVersionWithCallback:(nonnull id<ADJSdkVersionCallback>)sdkVersionCallback {
-    if (sdkVersionCallback == nil) {
-        [self.logger error:@"Callback for getting SDK version can't be null"];
+- (void)sdkVersionWithCompletionHandler:(nonnull ADJSdkVersionGetterBlock)completion {
+    if (completion == nil) {
+        [self.logger error:@"Completion block for getting SDK version can't be null"];
         return;
     }
 
     NSString *sdkVersion = [ADJUtil sdkVersion];
+    __block ADJSdkVersionGetterBlock localSdkVersionCallback = completion;
     [ADJUtil launchInMainThread:^{
-        [sdkVersionCallback didReadWithSdkVersion:sdkVersion];
+        localSdkVersionCallback(sdkVersion);
     }];
 }
 
-- (void)lastDeeplinkWithCallback:(nonnull id<ADJLastDeeplinkCallback>)lastDeeplinkCallback {
-    if (lastDeeplinkCallback == nil) {
-        [self.logger error:@"Callback for getting last opened deep link can't be null"];
+- (void)lastDeeplinkWithCompletionHandler:(nonnull ADJLastDeeplinkGetterBlock)completion {
+    if (completion == nil) {
+        [self.logger error:@"Completion block for getting last opened deep link can't be null"];
         return;
     }
 
     NSURL *lastDeeplink = [ADJUserDefaults getCachedDeeplinkUrl];
+    __block ADJLastDeeplinkGetterBlock localLastDeeplinkCallback = completion;
     [ADJUtil launchInMainThread:^{
-        [lastDeeplinkCallback didReadWithLastDeeplink:lastDeeplink];
+        localLastDeeplinkCallback(lastDeeplink);
     }];
 }
 
-- (void)verifyPurchase:(nonnull ADJPurchase *)purchase
-     completionHandler:(void (^_Nonnull)(ADJPurchaseVerificationResult * _Nonnull verificationResult))completionHandler {
+- (void)verifyAppStorePurchase:(nonnull ADJAppStorePurchase *)purchase
+         withCompletionHandler:(nonnull ADJVerificationResultBlock)completion {
     if (![self checkActivityHandler]) {
-        if (completionHandler != nil) {
+        if (completion != nil) {
             ADJPurchaseVerificationResult *result = [[ADJPurchaseVerificationResult alloc] init];
             result.verificationStatus = @"not_verified";
             result.code = 100;
             result.message = @"SDK needs to be initialized before making purchase verification request";
-            completionHandler(result);
+            completion(result);
         }
         return;
     }
-    [self.activityHandler verifyPurchase:purchase completionHandler:completionHandler];
+    [self.activityHandler verifyAppStorePurchase:purchase
+                           withCompletionHandler:completion];
 }
 
 - (void)enableCoppaCompliance {
@@ -690,19 +731,19 @@ static dispatch_once_t onceToken = 0;
     }
 }
 
-- (void)verifyAndTrack:(nonnull ADJEvent *)event
-     completionHandler:(void (^_Nonnull)(ADJPurchaseVerificationResult * _Nonnull verificationResult))completionHandler {
+- (void)verifyAndTrackAppStorePurchase:(nonnull ADJEvent *)event
+                 withCompletionHandler:(void (^_Nonnull)(ADJPurchaseVerificationResult * _Nonnull verificationResult))completion {
     if (![self checkActivityHandler]) {
-        if (completionHandler != nil) {
+        if (completion != nil) {
             ADJPurchaseVerificationResult *result = [[ADJPurchaseVerificationResult alloc] init];
             result.verificationStatus = @"not_verified";
             result.code = 100;
             result.message = @"SDK needs to be initialized before making purchase verification request";
-            completionHandler(result);
+            completion(result);
         }
         return;
     }
-    [self.activityHandler verifyAndTrack:event completionHandler:completionHandler];
+    [self.activityHandler verifyAndTrackAppStorePurchase:event withCompletionHandler:completion];
 }
 
 - (void)teardown {
@@ -772,7 +813,7 @@ static dispatch_once_t onceToken = 0;
         if (savedForLaunchWarningSuffixMessage != nil) {
             [self.logger warn:@"Adjust not initialized, but %@ saved for launch", savedForLaunchWarningSuffixMessage];
         } else {
-            [self.logger error:@"Please initialize Adjust by calling 'appDidLaunch' before"];
+            [self.logger error:@"Please initialize Adjust by calling initSdk: before"];
         }
         return NO;
     } else {

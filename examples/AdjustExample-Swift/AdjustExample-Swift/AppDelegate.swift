@@ -7,57 +7,39 @@
 //
 
 import UIKit
-import Adjust
+import AdjustSdk
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate, AdjustDelegate {
     var window: UIWindow?
-    
+
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         let appToken = "2fm9gkqubvpc"
         let environment = ADJEnvironmentSandbox
-        let adjustConfig = ADJConfig(appToken: appToken, environment: environment)
-        
+        let adjustConfig = ADJConfig(appToken: appToken, andEnvironment: environment)
+
         // Change the log level.
         adjustConfig?.logLevel = ADJLogLevelVerbose
-        
-        // Set default tracker.
-        // adjustConfig?.defaultTracker = "{TrackerToken}"
-        
-        // Send in the background.
-        // adjustConfig?.sendInBackground = true
-        
+
         // Set delegate object.
         adjustConfig?.delegate = self
-        
+
         // Add global callback parameters.
         Adjust.addGlobalCallbackParameter("wan", forKey: "obi")
         Adjust.addGlobalCallbackParameter("yoda", forKey: "master")
-        
+
         // Add global partner parameters.
         Adjust.addGlobalPartnerParameter("vader", forKey: "darth")
         Adjust.addGlobalPartnerParameter("solo", forKey: "han")
-        
+
         // Remove global callback parameter.
         Adjust.removeGlobalCallbackParameter(forKey: "obi")
         // Remove global partner parameter.
         Adjust.removeGlobalPartnerParameter(forKey: "han")
 
-        // Remove all global callback parameters.
-        // Adjust.removeGlobalCallbackParameters()
-
-        // Remove all global partner parameters.
-        // Adjust.removeGlobalPartnerParameters())
-
         // Initialise the SDK.
-        Adjust.appDidLaunch(adjustConfig!)
-        
-        // Put the SDK in offline mode.
-        // Adjust.setOfflineMode(true);
-        
-        // Disable the SDK
-        // Adjust.setEnabled(false);
-        
+        Adjust.initSdk(adjustConfig!)
+
         return true
     }
 
@@ -68,7 +50,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate, AdjustDelegate {
         // url object contains the deep link
 
         // Call the below method to send deep link to Adjust backend
-        Adjust.appWillOpen(url)
+        Adjust.processDeeplink(url)
         return true
     }
 
@@ -76,51 +58,51 @@ class AppDelegate: UIResponder, UIApplicationDelegate, AdjustDelegate {
         if (userActivity.activityType == NSUserActivityTypeBrowsingWeb) {
             NSLog("Universal link opened an app: %@", userActivity.webpageURL!.absoluteString)
             // Pass deep link to Adjust in order to potentially reattribute user.
-            Adjust.appWillOpen(userActivity.webpageURL!)
+            Adjust.processDeeplink(userActivity.webpageURL!)
         }
         return true
     }
-    
+
     func adjustAttributionChanged(_ attribution: ADJAttribution?) {
         NSLog("Attribution callback called!")
         NSLog("Attribution: %@", attribution ?? "")
     }
-    
+
     func adjustEventTrackingSucceeded(_ eventSuccessResponseData: ADJEventSuccess?) {
         NSLog("Event success callback called!")
         NSLog("Event success data: %@", eventSuccessResponseData ?? "")
     }
-    
+
     func adjustEventTrackingFailed(_ eventFailureResponseData: ADJEventFailure?) {
         NSLog("Event failure callback called!")
         NSLog("Event failure data: %@", eventFailureResponseData ?? "")
     }
-    
+
     func adjustSessionTrackingSucceeded(_ sessionSuccessResponseData: ADJSessionSuccess?) {
         NSLog("Session success callback called!")
         NSLog("Session success data: %@", sessionSuccessResponseData ?? "")
     }
-    
+
     func adjustSessionTrackingFailed(_ sessionFailureResponseData: ADJSessionFailure?) {
         NSLog("Session failure callback called!");
         NSLog("Session failure data: %@", sessionFailureResponseData ?? "")
     }
-    
-    func adjustDeeplinkResponse(_ deeplink: URL?) -> Bool {
+
+    func adjustDeferredDeeplinkReceived(_ deeplink: URL?) -> Bool {
         NSLog("Deferred deep link callback called!")
         NSLog("Deferred deep link URL: %@", deeplink?.absoluteString ?? "")
         return true
     }
-    
+
     func applicationWillResignActive(_ application: UIApplication) {
     }
-    
+
     func applicationDidEnterBackground(_ application: UIApplication) {
     }
-    
+
     func applicationWillEnterForeground(_ application: UIApplication) {
     }
-    
+
     func applicationDidBecomeActive(_ application: UIApplication) {
         // Show ATT dialog.
         Adjust.requestAppTrackingAuthorization { status in
@@ -142,7 +124,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate, AdjustDelegate {
             }
         }
     }
-    
+
     func applicationWillTerminate(_ application: UIApplication) {
     }
 }
+

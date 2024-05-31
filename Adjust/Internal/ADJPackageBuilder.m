@@ -13,7 +13,7 @@
 #import "ADJAdjustFactory.h"
 #import "ADJPackageBuilder.h"
 #import "ADJActivityPackage.h"
-#import "NSData+ADJAdditions.h"
+#import "ADJAdditions.h"
 #import "ADJUserDefaults.h"
 
 NSString * const ADJAttributionTokenParameter = @"attribution_token";
@@ -247,11 +247,12 @@ NSString * const ADJAttributionTokenParameter = @"attribution_token";
     return [self buildClickPackage:clickSource extraParameters:parameters];
 }
 
-- (ADJActivityPackage * _Nullable)buildPurchaseVerificationPackageWithPurchase:(ADJPurchase * _Nullable)purchase {
+- (ADJActivityPackage * _Nullable)buildPurchaseVerificationPackageWithPurchase:(ADJAppStorePurchase * _Nullable)purchase {
     NSMutableDictionary *parameters = [NSMutableDictionary dictionary];
 
     if (purchase.receipt != nil) {
-        NSString *receiptBase64 = [purchase.receipt adjEncodeBase64];
+        // NSString *receiptBase64 = [purchase.receipt adjEncodeBase64];
+        NSString *receiptBase64 = [ADJAdditions adjEncodeBase64:purchase.receipt];
         [ADJPackageBuilder parameters:parameters
                             setString:receiptBase64
                                forKey:@"receipt"];
@@ -274,7 +275,8 @@ NSString * const ADJAttributionTokenParameter = @"attribution_token";
     NSMutableDictionary *parameters = [NSMutableDictionary dictionary];
 
     if (event.receipt != nil) {
-        NSString *receiptBase64 = [event.receipt adjEncodeBase64];
+        // NSString *receiptBase64 = [event.receipt adjEncodeBase64];
+        NSString *receiptBase64 = [ADJAdditions adjEncodeBase64:event.receipt];
         [ADJPackageBuilder parameters:parameters
                             setString:receiptBase64
                                forKey:@"receipt"];
@@ -337,6 +339,7 @@ NSString * const ADJAttributionTokenParameter = @"attribution_token";
     [ADJPackageBuilder parameters:parameters setString:self.packageParams.versionNumber forKey:@"app_version_short"];
     [ADJPackageBuilder parameters:parameters setBool:YES forKey:@"attribution_deeplink"];
     [ADJPackageBuilder parameters:parameters setString:self.packageParams.bundleIdentifier forKey:@"bundle_id"];
+    [ADJPackageBuilder parameters:parameters setDictionary:[ADJUserDefaults getControlParams] forKey:@"control_params"];
     [ADJPackageBuilder parameters:parameters setDate1970:self.createdAt forKey:@"created_at"];
     [ADJPackageBuilder parameters:parameters setString:self.adjustConfig.defaultTracker forKey:@"default_tracker"];
     [ADJPackageBuilder parameters:parameters setString:self.packageParams.deviceName forKey:@"device_name"];
@@ -391,6 +394,7 @@ NSString * const ADJAttributionTokenParameter = @"attribution_token";
     [ADJPackageBuilder parameters:parameters setString:self.packageParams.versionNumber forKey:@"app_version_short"];
     [ADJPackageBuilder parameters:parameters setBool:YES forKey:@"attribution_deeplink"];
     [ADJPackageBuilder parameters:parameters setString:self.packageParams.bundleIdentifier forKey:@"bundle_id"];
+    [ADJPackageBuilder parameters:parameters setDictionary:[ADJUserDefaults getControlParams] forKey:@"control_params"];
     [ADJPackageBuilder parameters:parameters setDate1970:self.createdAt forKey:@"created_at"];
     [ADJPackageBuilder parameters:parameters setString:event.currency forKey:@"currency"];
     [ADJPackageBuilder parameters:parameters setString:self.packageParams.deviceName forKey:@"device_name"];
@@ -410,7 +414,8 @@ NSString * const ADJAttributionTokenParameter = @"attribution_token";
     [ADJPackageBuilder parameters:parameters setString:event.transactionId forKey:@"transaction_id"];
     [ADJPackageBuilder parameters:parameters setString:event.deduplicationId forKey:@"deduplication_id"];
     [ADJPackageBuilder parameters:parameters setString:event.productId forKey:@"product_id"];
-    [ADJPackageBuilder parameters:parameters setString:[event.receipt adjEncodeBase64] forKey:@"receipt"];
+    // [ADJPackageBuilder parameters:parameters setString:[event.receipt adjEncodeBase64] forKey:@"receipt"];
+    [ADJPackageBuilder parameters:parameters setString:[ADJAdditions adjEncodeBase64:event.receipt] forKey:@"receipt"];
 
     if ([self.trackingStatusManager canGetAttStatus]) {
         [ADJPackageBuilder parameters:parameters setInt:self.trackingStatusManager.attStatus
@@ -460,6 +465,7 @@ NSString * const ADJAttributionTokenParameter = @"attribution_token";
     [ADJPackageBuilder parameters:parameters setString:self.packageParams.bundleIdentifier forKey:@"bundle_id"];
     [ADJPackageBuilder parameters:parameters setDictionary:[self.globalParameters.callbackParameters copy] forKey:@"callback_params"];
     [ADJPackageBuilder parameters:parameters setDate:self.clickTime forKey:@"click_time"];
+    [ADJPackageBuilder parameters:parameters setDictionary:[ADJUserDefaults getControlParams] forKey:@"control_params"];
     [ADJPackageBuilder parameters:parameters setDate1970:self.createdAt forKey:@"created_at"];
     [ADJPackageBuilder parameters:parameters setString:self.deeplink forKey:@"deeplink"];
     [ADJPackageBuilder parameters:parameters setString:self.reftag forKey:@"reftag"];
@@ -525,6 +531,7 @@ NSString * const ADJAttributionTokenParameter = @"attribution_token";
     [ADJPackageBuilder parameters:parameters setString:self.packageParams.versionNumber forKey:@"app_version_short"];
     [ADJPackageBuilder parameters:parameters setBool:YES forKey:@"attribution_deeplink"];
     [ADJPackageBuilder parameters:parameters setString:self.packageParams.bundleIdentifier forKey:@"bundle_id"];
+    [ADJPackageBuilder parameters:parameters setDictionary:[ADJUserDefaults getControlParams] forKey:@"control_params"];
     [ADJPackageBuilder parameters:parameters setDate1970:self.createdAt forKey:@"created_at"];
     [ADJPackageBuilder parameters:parameters setString:self.adjustConfig.defaultTracker forKey:@"default_tracker"];
     [ADJPackageBuilder parameters:parameters setString:self.packageParams.deviceName forKey:@"device_name"];
@@ -595,6 +602,7 @@ NSString * const ADJAttributionTokenParameter = @"attribution_token";
     [ADJPackageBuilder parameters:parameters setString:self.packageParams.bundleIdentifier forKey:@"bundle_id"];
     [ADJPackageBuilder parameters:parameters setDictionary:[self.globalParameters.callbackParameters copy] forKey:@"callback_params"];
     [ADJPackageBuilder parameters:parameters setDate:self.clickTime forKey:@"click_time"];
+    [ADJPackageBuilder parameters:parameters setDictionary:[ADJUserDefaults getControlParams] forKey:@"control_params"];
     [ADJPackageBuilder parameters:parameters setDate1970:self.createdAt forKey:@"created_at"];
     [ADJPackageBuilder parameters:parameters setString:self.deeplink forKey:@"deeplink"];
     [ADJPackageBuilder parameters:parameters setString:self.reftag forKey:@"reftag"];
@@ -660,6 +668,7 @@ NSString * const ADJAttributionTokenParameter = @"attribution_token";
     [ADJPackageBuilder parameters:parameters setString:self.packageParams.versionNumber forKey:@"app_version_short"];
     [ADJPackageBuilder parameters:parameters setBool:YES forKey:@"attribution_deeplink"];
     [ADJPackageBuilder parameters:parameters setString:self.packageParams.bundleIdentifier forKey:@"bundle_id"];
+    [ADJPackageBuilder parameters:parameters setDictionary:[ADJUserDefaults getControlParams] forKey:@"control_params"];
     [ADJPackageBuilder parameters:parameters setDate1970:self.createdAt forKey:@"created_at"];
     [ADJPackageBuilder parameters:parameters setString:self.packageParams.deviceName forKey:@"device_name"];
     [ADJPackageBuilder parameters:parameters setString:self.packageParams.deviceType forKey:@"device_type"];
@@ -681,8 +690,8 @@ NSString * const ADJAttributionTokenParameter = @"attribution_token";
                                forKey:@"tracking_enabled"];
     }
 
-    if (self.adjustConfig.needsCost) {
-        [ADJPackageBuilder parameters:parameters setBool:self.adjustConfig.needsCost forKey:@"needs_cost"];
+    if (self.adjustConfig.isCostDataInAttributionEnabled) {
+        [ADJPackageBuilder parameters:parameters setBool:self.adjustConfig.isCostDataInAttributionEnabled forKey:@"needs_cost"];
     }
 
     if (self.activityState != nil) {
@@ -708,6 +717,7 @@ NSString * const ADJAttributionTokenParameter = @"attribution_token";
     [ADJPackageBuilder parameters:parameters setString:self.packageParams.versionNumber forKey:@"app_version_short"];
     [ADJPackageBuilder parameters:parameters setBool:YES forKey:@"attribution_deeplink"];
     [ADJPackageBuilder parameters:parameters setString:self.packageParams.bundleIdentifier forKey:@"bundle_id"];
+    [ADJPackageBuilder parameters:parameters setDictionary:[ADJUserDefaults getControlParams] forKey:@"control_params"];
     [ADJPackageBuilder parameters:parameters setDate1970:self.createdAt forKey:@"created_at"];
     [ADJPackageBuilder parameters:parameters setString:self.packageParams.deviceName forKey:@"device_name"];
     [ADJPackageBuilder parameters:parameters setString:self.packageParams.deviceType forKey:@"device_type"];
@@ -753,6 +763,7 @@ NSString * const ADJAttributionTokenParameter = @"attribution_token";
     [ADJPackageBuilder parameters:parameters setString:self.packageParams.bundleIdentifier forKey:@"bundle_id"];
     [ADJPackageBuilder parameters:parameters setDictionary:[self.globalParameters.callbackParameters copy] forKey:@"callback_params"];
     [ADJPackageBuilder parameters:parameters setDate:self.clickTime forKey:@"click_time"];
+    [ADJPackageBuilder parameters:parameters setDictionary:[ADJUserDefaults getControlParams] forKey:@"control_params"];
     [ADJPackageBuilder parameters:parameters setDate1970:self.createdAt forKey:@"created_at"];
     [ADJPackageBuilder parameters:parameters setString:self.deeplink forKey:@"deeplink"];
     [ADJPackageBuilder parameters:parameters setString:self.reftag forKey:@"reftag"];
@@ -824,6 +835,7 @@ NSString * const ADJAttributionTokenParameter = @"attribution_token";
     [ADJPackageBuilder parameters:parameters setString:self.packageParams.bundleIdentifier forKey:@"bundle_id"];
     [ADJPackageBuilder parameters:parameters setDictionary:[self.globalParameters.callbackParameters copy] forKey:@"callback_params"];
     [ADJPackageBuilder parameters:parameters setDate:self.clickTime forKey:@"click_time"];
+    [ADJPackageBuilder parameters:parameters setDictionary:[ADJUserDefaults getControlParams] forKey:@"control_params"];
     [ADJPackageBuilder parameters:parameters setDate1970:self.createdAt forKey:@"created_at"];
     [ADJPackageBuilder parameters:parameters setString:self.deeplink forKey:@"deeplink"];
     [ADJPackageBuilder parameters:parameters setString:self.reftag forKey:@"reftag"];
@@ -886,6 +898,7 @@ NSString * const ADJAttributionTokenParameter = @"attribution_token";
     [ADJPackageBuilder parameters:parameters setString:self.packageParams.versionNumber forKey:@"app_version_short"];
     [ADJPackageBuilder parameters:parameters setBool:YES forKey:@"attribution_deeplink"];
     [ADJPackageBuilder parameters:parameters setString:self.packageParams.bundleIdentifier forKey:@"bundle_id"];
+    [ADJPackageBuilder parameters:parameters setDictionary:[ADJUserDefaults getControlParams] forKey:@"control_params"];
     [ADJPackageBuilder parameters:parameters setDate1970:self.createdAt forKey:@"created_at"];
     [ADJPackageBuilder parameters:parameters setString:self.packageParams.deviceName forKey:@"device_name"];
     [ADJPackageBuilder parameters:parameters setString:self.packageParams.deviceType forKey:@"device_type"];
@@ -932,7 +945,8 @@ NSString * const ADJAttributionTokenParameter = @"attribution_token";
     [ADJPackageBuilder parameters:parameters setNumber:subscription.price forKey:@"revenue"];
     [ADJPackageBuilder parameters:parameters setString:subscription.currency forKey:@"currency"];
     [ADJPackageBuilder parameters:parameters setString:subscription.transactionId forKey:@"transaction_id"];
-    [ADJPackageBuilder parameters:parameters setString:[subscription.receipt adjEncodeBase64] forKey:@"receipt"];
+    // [ADJPackageBuilder parameters:parameters setString:[subscription.receipt adjEncodeBase64] forKey:@"receipt"];
+    [ADJPackageBuilder parameters:parameters setString:[ADJAdditions adjEncodeBase64:subscription.receipt] forKey:@"receipt"];
     [ADJPackageBuilder parameters:parameters setDate:subscription.transactionDate forKey:@"transaction_date"];
     [ADJPackageBuilder parameters:parameters setString:subscription.salesRegion forKey:@"sales_region"];
 
@@ -952,6 +966,7 @@ NSString * const ADJAttributionTokenParameter = @"attribution_token";
     [ADJPackageBuilder parameters:parameters setBool:YES forKey:@"attribution_deeplink"];
     [ADJPackageBuilder parameters:parameters setString:self.packageParams.bundleIdentifier forKey:@"bundle_id"];
     [ADJPackageBuilder parameters:parameters setDictionary:[self.globalParameters.callbackParameters copy] forKey:@"callback_params"];
+    [ADJPackageBuilder parameters:parameters setDictionary:[ADJUserDefaults getControlParams] forKey:@"control_params"];
     [ADJPackageBuilder parameters:parameters setDate1970:self.createdAt forKey:@"created_at"];
     [ADJPackageBuilder parameters:parameters setString:self.adjustConfig.defaultTracker forKey:@"default_tracker"];
     [ADJPackageBuilder parameters:parameters setDictionary:self.attributionDetails forKey:@"details"];
@@ -1011,13 +1026,13 @@ NSString * const ADJAttributionTokenParameter = @"attribution_token";
     if (self.isCoppaComplianceEnabled == YES) {
         [ADJPackageBuilder parameters:parameters setBool:YES forKey:@"ff_coppa"];
     }
-    if (self.adjustConfig.isSkanAttributionHandlingEnabled == NO) {
+    if (self.adjustConfig.isSkanAttributionEnabled == NO) {
         [ADJPackageBuilder parameters:parameters setBool:YES forKey:@"ff_skadn_disabled"];
     }
-    if (self.adjustConfig.isIdfaReadingAllowed == NO) {
+    if (self.adjustConfig.isIdfaReadingEnabled == NO) {
         [ADJPackageBuilder parameters:parameters setBool:YES forKey:@"ff_idfa_disabled"];
     }
-    if (self.adjustConfig.allowAdServicesInfoReading == NO) {
+    if (self.adjustConfig.isAdServicesEnabled == NO) {
         [ADJPackageBuilder parameters:parameters setBool:YES forKey:@"ff_adserv_disabled"];
     }
 }
@@ -1142,7 +1157,7 @@ NSString * const ADJAttributionTokenParameter = @"attribution_token";
     }
 
     // idfa
-    if (!adjConfig.isIdfaReadingAllowed) {
+    if (!adjConfig.isIdfaReadingEnabled) {
         [[ADJAdjustFactory logger] info:@"Cannot read IDFA because it's forbidden by ADJConfig setting"];
         return;
     }
@@ -1154,7 +1169,7 @@ NSString * const ADJAttributionTokenParameter = @"attribution_token";
     __block NSString *idfa = nil;
     [ADJUtil launchSynchronisedWithObject:[ADJPackageBuilder class] block:^{
         // read once && IDFA not cached
-        if (adjConfig.shouldReadDeviceInfoOnce && packageParams.idfaCached != nil) {
+        if (adjConfig.isDeviceIdsReadingOnceEnabled && packageParams.idfaCached != nil) {
             idfa = packageParams.idfaCached;
         } else {
             // read IDFA

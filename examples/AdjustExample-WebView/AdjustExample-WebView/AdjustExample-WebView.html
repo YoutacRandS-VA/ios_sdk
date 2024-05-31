@@ -28,8 +28,6 @@
         let adjustConfig = new AdjustConfig('2fm9gkqubvpc', AdjustConfig.EnvironmentSandbox);
         adjustConfig.setLogLevel(AdjustConfig.LogLevelVerbose);
 
-        adjustConfig.setOpenDeferredDeeplink(true)     // Just for test, is true by default.
-
         adjustConfig.setAttributionCallback(function(attribution) {
             console.log('Tracker token = ' + attribution.trackerToken + '\n' +
                   'Tracker name = ' + attribution.trackerName + '\n' +
@@ -68,8 +66,11 @@
         adjustConfig.setDeferredDeeplinkCallback(function(deferredDeeplink) {
             console.log('Deferred deeplink:\n' + deferredDeeplink)
         })
+        adjustConfig.setSkanUpdatedCallback(function(skanData) {
+            alert('SKAN: ' + skanData.error);
+        })
 
-        Adjust.appDidLaunch(adjustConfig);
+        Adjust.initSdk(adjustConfig);
 
         var btnTrackSimpleEvent = document.getElementById('btnTrackSimpleEvent')
         btnTrackSimpleEvent.onclick = function(e) {
@@ -110,13 +111,13 @@
         var btnEnableOfflineMode = document.getElementById('btnEnableOfflineMode')
         btnEnableOfflineMode.onclick = function(e) {
             e.preventDefault()
-            Adjust.setOfflineMode(true)
+            Adjust.switchToOfflineMode()
         }
 
         var btnDisableOfflineMode = document.getElementById('btnDisableOfflineMode')
         btnDisableOfflineMode.onclick = function(e) {
             e.preventDefault()
-            Adjust.setOfflineMode(false)
+            Adjust.switchBackToOnlineMode()
         }
 
         var btnEnableSdk = document.getElementById('btnEnableSdk')

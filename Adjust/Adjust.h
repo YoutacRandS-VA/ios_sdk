@@ -14,18 +14,18 @@
 #import "ADJThirdPartySharing.h"
 #import "ADJAdRevenue.h"
 #import "ADJLinkResolution.h"
-#import "ADJPurchase.h"
+#import "ADJAppStorePurchase.h"
 #import "ADJPurchaseVerificationResult.h"
 
-typedef void(^AdjustResolvedDeeplinkBlock)(NSString * _Nonnull resolvedLink);
-
-@protocol ADJAttributionCallback;
-@protocol ADJIdfaCallback;
-@protocol ADJIdfvCallback;
-@protocol ADJSdkVersionCallback;
-@protocol ADJLastDeeplinkCallback;
-@protocol ADJAdidCallback;
-@protocol ADJIsEnabledCallback;
+typedef void(^ADJResolvedDeeplinkBlock)(NSString * _Nullable resolvedLink);
+typedef void(^ADJAttributionGetterBlock)(ADJAttribution * _Nullable attribution);
+typedef void(^ADJIdfaGetterBlock)(NSString * _Nullable idfa);
+typedef void(^ADJIdfvGetterBlock)(NSString * _Nullable idfv);
+typedef void(^ADJSdkVersionGetterBlock)(NSString * _Nullable sdkVersion);
+typedef void(^ADJLastDeeplinkGetterBlock)(NSURL * _Nullable lastDeeplink);
+typedef void(^ADJAdidGetterBlock)(NSString * _Nullable adid);
+typedef void(^ADJIsEnabledGetterBlock)(BOOL isEnabled);
+typedef void(^ADJVerificationResultBlock)(ADJPurchaseVerificationResult * _Nonnull verificationResult);
 
 /**
  * Constants for our supported tracking environments.
@@ -53,7 +53,7 @@ extern NSString * __nonnull const ADJEnvironmentProduction;
  *                     be found it in your dashboard at http://adjust.com and should always
  *                     be 12 characters long.
  */
-+ (void)appDidLaunch:(nullable ADJConfig *)adjustConfig;
++ (void)initSdk:(nullable ADJConfig *)adjustConfig;
 
 /**
  * @brief Tell Adjust that a particular event has happened.
@@ -70,7 +70,7 @@ extern NSString * __nonnull const ADJEnvironmentProduction;
  * @brief Tell adjust that the application resumed.
  *
  * @note Only necessary if the native notifications can't be used
- *       or if they will happen before call to appDidLaunch: is made.
+ *       or if they will happen before call to initSdk: is made.
  */
 + (void)trackSubsessionStart;
 
@@ -82,18 +82,21 @@ extern NSString * __nonnull const ADJEnvironmentProduction;
 + (void)trackSubsessionEnd;
 
 /**
- * @brief Enable or disable the adjust SDK. This setting is saved for future sessions.
- *
- * @param enabled The flag to enable or disable the adjust SDK.
+ * @brief Enable Adjust SDK. This setting is saved for future sessions.
  */
-+ (void)setEnabled:(BOOL)enabled;
++ (void)enable;
+
+/**
+ * @brief Disable Adjust SDK. This setting is saved for future sessions.
+ */
++ (void)disable;
 
 /**
  * @brief Check if the SDK is enabled or disabled through a callback.
  *
- * @param isEnabledCallback Callback to be pinged with the enabled state of the SDK.
+ * @param completion Completion block to be pinged with the enabled state of the SDK.
  */
-+ (void)isEnabledWithCallback:(nonnull id<ADJIsEnabledCallback>)isEnabledCallback;
++ (void)isEnabledWithCompletionHandler:(nonnull ADJIsEnabledGetterBlock)completion;
 
 /**
  * @brief Read the URL that opened the application to search for an adjust deep link.
@@ -106,10 +109,10 @@ extern NSString * __nonnull const ADJEnvironmentProduction;
  * @brief Process the deep link that has opened an app and potentially get a resolved link.
  *
  * @param deeplink URL object which contains info about adjust deep link.
- * @param completionHandler Completion handler where either resolved or echoed deep link will be sent.
+ * @param completion Completion block where either resolved or echoed deep link will be sent.
  */
 + (void)processAndResolveDeeplink:(nonnull NSURL *)deeplink
-                completionHandler:(void (^_Nonnull)(NSString * _Nonnull resolvedLink))completionHandler;
+            withCompletionHandler:(nonnull ADJResolvedDeeplinkBlock)completion;
 
 /**
  * @brief Set the APNs push token.
@@ -127,36 +130,40 @@ extern NSString * __nonnull const ADJEnvironmentProduction;
 + (void)setPushTokenAsString:(nonnull NSString *)pushToken;
 
 /**
- * @brief Enable or disable offline mode. Activities won't be sent but they are saved when
+ * @brief Enable offline mode. Activities won't be sent but they are saved when
  *        offline mode is disabled. This feature is not saved for future sessions.
- *
- * @param enabled The flag to enable or disable offline mode.
  */
-+ (void)setOfflineMode:(BOOL)enabled;
++ (void)switchToOfflineMode;
+
+/**
+ * @brief Disable offline mode. Activities won't be sent but they are saved when
+ *        offline mode is disabled. This feature is not saved for future sessions.
+ */
++ (void)switchBackToOnlineMode;
 
 /**
  * @brief Retrieve iOS device IDFA value through a callback.
  *
- * @param idfaCallback Callback to get IDFA value delivered to.
+ * @param completion Completion block to get IDFA value delivered to.
  */
-+ (void)idfaWithCallback:(nonnull id<ADJIdfaCallback>)idfaCallback;
++ (void)idfaWithCompletionHandler:(nonnull ADJIdfaGetterBlock)completion;
 
 /**
  * @brief Retrieve iOS device IDFV value through a callback.
  *
- * @param idfvCallback Callback to get the IDFV value delivered to.
+ * @param completion Completion block to get the IDFV value delivered to.
  */
-+ (void)idfvWithCallback:(nonnull id<ADJIdfvCallback>)idfvCallback;
++ (void)idfvWithCompletionHandler:(nonnull ADJIdfvGetterBlock)completion;
 
 
 /**
  * @brief Get current adjust identifier for the user through a callback.
  *
- * @param adidCallback Callback to get the adid value delivered to.
+ * @param completion Completion block to get the adid value delivered to.
  *
  * @note Adjust identifier is available only after installation has been successfully tracked.
  */
-+ (void)adidWithCallback:(nonnull id<ADJAdidCallback>)adidCallback;
++ (void)adidWithCompletionHandler:(nonnull ADJAdidGetterBlock)completion;
 
 /**
  * @brief Get current attribution for the user through a callback.
@@ -164,14 +171,14 @@ extern NSString * __nonnull const ADJEnvironmentProduction;
  * @note Attribution information is available only after installation has been successfully tracked
  *       and attribution information arrived after that from the backend.
  */
-+ (void)attributionWithCallback:(nonnull id<ADJAttributionCallback>)attributionCallback;
++ (void)attributionWithCompletionHandler:(nonnull ADJAttributionGetterBlock)completion;
 
 /**
  * @brief Get current Adjust SDK version string through a callback.
  *
- * @param sdkVersionCallback Callback to get the Adjust SDK version string (iosX.Y.Z) delivered to.
+ * @param completion Completion block to get the Adjust SDK version string (iosX.Y.Z) delivered to.
  */
-+ (void)sdkVersionWithCallback:(nonnull id<ADJSdkVersionCallback>)sdkVersionCallback;
++ (void)sdkVersionWithCompletionHandler:(nonnull ADJSdkVersionGetterBlock)completion;
 
 /**
  * @brief Convert a universal link style URL to a deeplink style URL with the corresponding scheme.
@@ -229,7 +236,7 @@ extern NSString * __nonnull const ADJEnvironmentProduction;
 + (void)gdprForgetMe;
 
 /**
- * @brief Track third paty sharing with possibility to allow or disallow it.
+ * @brief Track third party sharing with possibility to allow or disallow it.
  *
  * @param thirdPartySharing Third party sharing choice.
  */
@@ -282,23 +289,23 @@ extern NSString * __nonnull const ADJEnvironmentProduction;
 + (void)updateSkanConversionValue:(NSInteger)conversionValue
                       coarseValue:(nullable NSString *)coarseValue
                        lockWindow:(nullable NSNumber *)lockWindow
-                completionHandler:(void (^_Nullable)(NSError *_Nullable error))completion;
+            withCompletionHandler:(void (^_Nullable)(NSError *_Nullable error))completion;
 
 /**
  * @brief Get the last deep link which has opened the app through a callback.
  *
- * @param lastDeeplinkCallback Callback to get the last opened deep link delivered to.
+ * @param completion Completion block to get the last opened deep link delivered to.
  */
-+ (void)lastDeeplinkWithCallback:(nonnull id<ADJLastDeeplinkCallback>)lastDeeplinkCallback;
++ (void)lastDeeplinkWithCompletionHandler:(nonnull ADJLastDeeplinkGetterBlock)completion;
 
 /**
  * @brief Verify in-app-purchase.
  *
- * @param purchase          Purchase object.
- * @param completionHandler Callback where verification result will be repoted.
+ * @param purchase   Purchase object.
+ * @param completion Callback where verification result will be reported.
  */
-+ (void)verifyPurchase:(nonnull ADJPurchase *)purchase
-     completionHandler:(void (^_Nonnull)(ADJPurchaseVerificationResult * _Nonnull verificationResult))completionHandler;
++ (void)verifyAppStorePurchase:(nonnull ADJAppStorePurchase *)purchase
+         withCompletionHandler:(nonnull ADJVerificationResultBlock)completion;
 
 /**
  * @brief Enable COPPA (Children's Online Privacy Protection Act) compliant for the application.
@@ -310,8 +317,8 @@ extern NSString * __nonnull const ADJEnvironmentProduction;
  */
 + (void)disableCoppaCompliance;
 
-+ (void)verifyAndTrack:(nonnull ADJEvent *)event
-     completionHandler:(void (^_Nonnull)(ADJPurchaseVerificationResult * _Nonnull verificationResult))completionHandler;
++ (void)verifyAndTrackAppStorePurchase:(nonnull ADJEvent *)event
+                 withCompletionHandler:(nonnull ADJVerificationResultBlock)completion;
 
 /**
  * @brief Method used for internal testing only. Don't use it in production.
@@ -323,22 +330,24 @@ extern NSString * __nonnull const ADJEnvironmentProduction;
  */
 + (nullable instancetype)getInstance;
 
-- (void)appDidLaunch:(nullable ADJConfig *)adjustConfig;
+- (void)initSdk:(nullable ADJConfig *)adjustConfig;
 
 - (void)trackEvent:(nullable ADJEvent *)event;
 
-- (void)setEnabled:(BOOL)enabled;
+- (void)enable;
 
-- (void)isEnabledWithCallback:(nonnull id<ADJIsEnabledCallback>)isEnabledCallback;
+- (void)disable;
 
 - (void)teardown;
 
 - (void)processDeeplink:(nonnull NSURL *)deeplink;
 
 - (void)processAndResolveDeeplink:(nonnull NSURL *)deeplink
-                completionHandler:(void (^_Nonnull)(NSString * _Nonnull resolvedLink))completionHandler;
+            withCompletionHandler:(nonnull ADJResolvedDeeplinkBlock)completion;
 
-- (void)setOfflineMode:(BOOL)enabled;
+- (void)switchToOfflineMode;
+
+- (void)switchBackToOnlineMode;
 
 - (void)setPushToken:(nonnull NSData *)pushToken;
 
@@ -364,17 +373,17 @@ extern NSString * __nonnull const ADJEnvironmentProduction;
 
 - (void)trackAppStoreSubscription:(nonnull ADJAppStoreSubscription *)subscription;
 
-- (void)isEnabledWithCallback:(nonnull id<ADJIsEnabledCallback>)isEnabledCallback;
+- (void)isEnabledWithCompletionHandler:(nonnull ADJIsEnabledGetterBlock)completion;
 
-- (void)adidWithCallback:(nonnull id<ADJAdidCallback>)adidCallback;;
+- (void)adidWithCompletionHandler:(nonnull ADJAdidGetterBlock)completion;
 
-- (void)idfaWithCallback:(nonnull id<ADJIdfaCallback>)idfaCallback;
+- (void)idfaWithCompletionHandler:(nonnull ADJIdfaGetterBlock)completion;
 
-- (void)idfvWithCallback:(nonnull id<ADJIdfvCallback>)idfvCallback;
+- (void)idfvWithCompletionHandler:(nonnull ADJIdfvGetterBlock)completion;
 
-- (void)sdkVersionWithCallback:(nonnull id<ADJSdkVersionCallback>)sdkVersionCallback;
+- (void)sdkVersionWithCompletionHandler:(nonnull ADJSdkVersionGetterBlock)completion;
 
-- (void)attributionWithCallback:(nonnull id<ADJAttributionCallback>)attributionCallback;
+- (void)attributionWithCompletionHandler:(nonnull ADJAttributionGetterBlock)completion;
 
 - (nullable NSURL *)convertUniversalLink:(nonnull NSURL *)url withScheme:(nonnull NSString *)scheme;
 
@@ -385,7 +394,7 @@ extern NSString * __nonnull const ADJEnvironmentProduction;
 - (void)updateSkanConversionValue:(NSInteger)conversionValue
                       coarseValue:(nullable NSString *)coarseValue
                        lockWindow:(nullable NSNumber *)lockWindow
-                completionHandler:(void (^_Nullable)(NSError *_Nullable error))completion;
+            withCompletionHandler:(void (^_Nullable)(NSError *_Nullable error))completion;
 
 - (void)trackThirdPartySharing:(nonnull ADJThirdPartySharing *)thirdPartySharing;
 
@@ -393,58 +402,16 @@ extern NSString * __nonnull const ADJEnvironmentProduction;
 
 - (void)trackAdRevenue:(nonnull ADJAdRevenue *)adRevenue;
 
-- (void)lastDeeplinkWithCallback:(nonnull id<ADJLastDeeplinkCallback>)lastDeeplinkCallback;
+- (void)lastDeeplinkWithCompletionHandler:(nonnull ADJLastDeeplinkGetterBlock)completion;
 
-- (void)verifyPurchase:(nonnull ADJPurchase *)purchase
-     completionHandler:(void (^_Nonnull)(ADJPurchaseVerificationResult * _Nonnull verificationResult))completionHandler;
+- (void)verifyAppStorePurchase:(nonnull ADJAppStorePurchase *)purchase
+         withCompletionHandler:(nonnull ADJVerificationResultBlock)completion;
 
 - (void)enableCoppaCompliance;
 
 - (void)disableCoppaCompliance;
 
-- (void)verifyAndTrack:(nonnull ADJEvent *)event
-     completionHandler:(void (^_Nonnull)(ADJPurchaseVerificationResult * _Nonnull verificationResult))completionHandler;
-
-@end
-
-@protocol ADJAttributionCallback <NSObject>
-
-- (void)didReadWithAdjustAttribution:(nonnull ADJAttribution *)adjustAttribution;
-
-@end
-
-@protocol ADJIdfaCallback <NSObject>
-
-- (void)didReadWithIdfa:(nullable NSString *)idfa;
-
-@end
-
-@protocol ADJIdfvCallback <NSObject>
-
-- (void)didReadWithIdfv:(nullable NSString *)idfv;
-
-@end
-
-@protocol ADJSdkVersionCallback <NSObject>
-
-- (void)didReadWithSdkVersion:(nullable NSString *)sdkVersion;
-
-@end
-
-@protocol ADJLastDeeplinkCallback <NSObject>
-
-- (void)didReadWithLastDeeplink:(nullable NSURL *)lastDeeplink;
-
-@end
-
-@protocol ADJAdidCallback <NSObject>
-
-- (void)didReadWithAdid:(nullable NSString *)adid;
-
-@end
-
-@protocol ADJIsEnabledCallback <NSObject>
-
-- (void)didReadWithIsEnabled:(BOOL)isEnabled;
+- (void)verifyAndTrackAppStorePurchase:(nonnull ADJEvent *)event
+                 withCompletionHandler:(nonnull ADJVerificationResultBlock)completion;
 
 @end

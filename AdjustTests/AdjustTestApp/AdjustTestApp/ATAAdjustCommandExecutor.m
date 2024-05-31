@@ -19,16 +19,6 @@
 #import "ATAAdjustCommandExecutor.h"
 #import "ViewController.h"
 
-@interface ADJAttributionGetterSendAll : NSObject<ADJAttributionCallback>
-@property (nonatomic, strong) ATLTestLibrary *testLibrary;
-@property (nonatomic, copy) NSString *extraPath;
-@end
-
-@interface ADJLastDeeplinkGetterSendAll : NSObject<ADJLastDeeplinkCallback>
-@property (nonatomic, strong) ATLTestLibrary *testLibrary;
-@property (nonatomic, copy) NSString *extraPath;
-@end
-
 @interface ATAAdjustCommandExecutor ()
 
 @property (nonatomic, copy) NSString *extraPath;
@@ -231,7 +221,8 @@
         NSString *environment = [parameters objectForKey:@"environment"][0];
         NSString *appToken = [parameters objectForKey:@"appToken"][0];
 
-        adjustConfig = [ADJConfig configWithAppToken:appToken environment:environment];
+        adjustConfig = [[ADJConfig alloc] initWithAppToken:appToken
+                                            andEnvironment:environment];
         [self.savedConfigs setObject:adjustConfig forKey:configNumber];
     }
     
@@ -276,12 +267,16 @@
 
     if ([parameters objectForKey:@"needsCost"]) {
         NSString *needsCostS = [parameters objectForKey:@"needsCost"][0];
-        [adjustConfig setNeedsCost:[needsCostS boolValue]];
+        if ([needsCostS boolValue] == YES) {
+            [adjustConfig enableCostDataInAttribution];
+        }
     }
 
     if ([parameters objectForKey:@"sendInBackground"]) {
         NSString *sendInBackgroundS = [parameters objectForKey:@"sendInBackground"][0];
-        [adjustConfig setSendInBackground:[sendInBackgroundS boolValue]];
+        if ([sendInBackgroundS boolValue] == YES) {
+            [adjustConfig enableSendingInBackground];
+        }
     }
     
     if ([parameters objectForKey:@"allowIdfaReading"]) {
@@ -293,13 +288,15 @@
 
     if ([parameters objectForKey:@"allowAdServicesInfoReading"]) {
         NSString *allowAdServicesInfoReadingS = [parameters objectForKey:@"allowAdServicesInfoReading"][0];
-        [adjustConfig setAllowAdServicesInfoReading:[allowAdServicesInfoReadingS boolValue]];
+        if ([allowAdServicesInfoReadingS boolValue] == NO) {
+            [adjustConfig disableAdServices];
+        }
     }
     
     if ([parameters objectForKey:@"allowSkAdNetworkHandling"]) {
         NSString *allowSkAdNetworkHandlingS = [parameters objectForKey:@"allowSkAdNetworkHandling"][0];
         if ([allowSkAdNetworkHandlingS boolValue] == NO) {
-            [adjustConfig disableSkanAttributionHandling];
+            [adjustConfig disableSkanAttribution];
         }
     }
 
@@ -392,7 +389,7 @@
 
     ADJConfig *adjustConfig = [self.savedConfigs objectForKey:configNumber];
     [adjustConfig setLogLevel:ADJLogLevelVerbose];
-    [Adjust appDidLaunch:adjustConfig];
+    [Adjust initSdk:adjustConfig];
     [self.savedConfigs removeObjectForKey:[NSNumber numberWithInt:0]];
 }
 
@@ -415,7 +412,7 @@
         } else {
             eventToken = [parameters objectForKey:@"eventToken"][0];
         }
-        adjustEvent = [ADJEvent eventWithEventToken:eventToken];
+        adjustEvent = [[ADJEvent alloc] initWithEventToken:eventToken];
         [self.savedEvents setObject:adjustEvent forKey:eventNumber];
     }
 
@@ -522,12 +519,20 @@
 
 - (void)setEnabled:(NSDictionary *)parameters {
     NSString *enabledS = [parameters objectForKey:@"enabled"][0];
-    [Adjust setEnabled:[enabledS boolValue]];
+    if ([enabledS boolValue] == YES) {
+        [Adjust enable];
+    } else {
+        [Adjust disable];
+    }
 }
 
 - (void)setOfflineMode:(NSDictionary *)parameters {
     NSString *enabledS = [parameters objectForKey:@"enabled"][0];
-    [Adjust setOfflineMode:[enabledS boolValue]];
+    if ([enabledS boolValue] == YES) {
+        [Adjust switchToOfflineMode];
+    } else {
+        [Adjust switchBackToOnlineMode];
+    }
 }
 
 - (void)addGlobalCallbackParameter:(NSDictionary *)parameters {
@@ -600,7 +605,7 @@
     }
 
     ADJThirdPartySharing *adjustThirdPartySharing =
-        [[ADJThirdPartySharing alloc] initWithIsEnabledNumberBool:isEnabled];
+        [[ADJThirdPartySharing alloc] initWithIsEnabled:isEnabled];
 
     if ([parameters objectForKey:@"granularOptions"]) {
         NSArray *granularOptions = [parameters objectForKey:@"granularOptions"];
@@ -745,12 +750,11 @@
 }
 
 - (void)getLastDeeplink:(NSDictionary *)parameters {
-    ADJLastDeeplinkGetterSendAll *_Nonnull lastDeeplinkGetter =
-    [[ADJLastDeeplinkGetterSendAll alloc] init];
-    lastDeeplinkGetter.testLibrary = self.testLibrary;
-    lastDeeplinkGetter.extraPath = self.extraPath;
-
-    [Adjust lastDeeplinkWithCallback:lastDeeplinkGetter];
+    [Adjust lastDeeplinkWithCompletionHandler:^(NSURL * _Nullable lastDeeplink) {
+        NSString *lastDeeplinkString = lastDeeplink == nil ? @"" : [lastDeeplink absoluteString];
+        [self.testLibrary addInfoToSend:@"last_deeplink" value:lastDeeplinkString];
+        [self.testLibrary sendInfoToServer:self.extraPath];
+    }];
 }
 
 - (void)verifyPurchase:(NSDictionary *)parameters {
@@ -769,10 +773,11 @@
         productId = [parameters objectForKey:@"productId"][0];
     }
 
-    ADJPurchase *purchase = [[ADJPurchase alloc] initWithTransactionId:transactionId
-                                                             productId:productId
-                                                            andReceipt:receipt];
-    [Adjust verifyPurchase:purchase completionHandler:^(ADJPurchaseVerificationResult * _Nonnull verificationResult) {
+    ADJAppStorePurchase *purchase = [[ADJAppStorePurchase alloc] initWithTransactionId:transactionId
+                                                                             productId:productId
+                                                                            andReceipt:receipt];
+    [Adjust verifyAppStorePurchase:purchase
+             withCompletionHandler:^(ADJPurchaseVerificationResult * _Nonnull verificationResult) {
         [self.testLibrary addInfoToSend:@"verification_status" value:verificationResult.verificationStatus];
         [self.testLibrary addInfoToSend:@"code" value:[NSString stringWithFormat:@"%d", verificationResult.code]];
         [self.testLibrary addInfoToSend:@"message" value:verificationResult.message];
@@ -783,19 +788,27 @@
 - (void)processDeeplink:(NSDictionary *)parameters {
     NSString *deeplinkS = [parameters objectForKey:@"deeplink"][0];
     NSURL *deeplink = [NSURL URLWithString:deeplinkS];
-    [Adjust processAndResolveDeeplink:deeplink completionHandler:^(NSString * _Nonnull resolvedLink) {
+    [Adjust processAndResolveDeeplink:deeplink
+                withCompletionHandler:^(NSString * _Nullable resolvedLink) {
         [self.testLibrary addInfoToSend:@"resolved_link" value:resolvedLink];
         [self.testLibrary sendInfoToServer:self.extraPath];
     }];
 }
 
 - (void)attributionGetter:(NSDictionary *)parameters {
-    ADJAttributionGetterSendAll *_Nonnull attributionGetter =
-        [[ADJAttributionGetterSendAll alloc] init];
-    attributionGetter.testLibrary = self.testLibrary;
-    attributionGetter.extraPath = self.extraPath;
-
-    [Adjust attributionWithCallback:attributionGetter];
+    [Adjust attributionWithCompletionHandler:^(ADJAttribution * _Nullable attribution) {
+        [self.testLibrary addInfoToSend:@"tracker_token" value:attribution.trackerToken];
+        [self.testLibrary addInfoToSend:@"tracker_name" value:attribution.trackerName];
+        [self.testLibrary addInfoToSend:@"network" value:attribution.network];
+        [self.testLibrary addInfoToSend:@"campaign" value:attribution.campaign];
+        [self.testLibrary addInfoToSend:@"adgroup" value:attribution.adgroup];
+        [self.testLibrary addInfoToSend:@"creative" value:attribution.creative];
+        [self.testLibrary addInfoToSend:@"click_label" value:attribution.clickLabel];
+        [self.testLibrary addInfoToSend:@"cost_type" value:attribution.costType];
+        [self.testLibrary addInfoToSend:@"cost_amount" value:[attribution.costAmount stringValue]];
+        [self.testLibrary addInfoToSend:@"cost_currency" value:attribution.costCurrency];
+        [self.testLibrary sendInfoToServer:self.extraPath];
+    }];
 }
 
 - (void)enableCoppaCompliance:(NSDictionary *)parameters {
@@ -804,35 +817,6 @@
 
 - (void)disableCoppaCompliance:(NSDictionary *)parameters {
     [Adjust disableCoppaCompliance];
-}
-
-@end
-
-@implementation ADJAttributionGetterSendAll
-
-- (void)didReadWithAdjustAttribution:(nonnull ADJAttribution *)attribution {
-    [self.testLibrary addInfoToSend:@"tracker_token" value:attribution.trackerToken];
-    [self.testLibrary addInfoToSend:@"tracker_name" value:attribution.trackerName];
-    [self.testLibrary addInfoToSend:@"network" value:attribution.network];
-    [self.testLibrary addInfoToSend:@"campaign" value:attribution.campaign];
-    [self.testLibrary addInfoToSend:@"adgroup" value:attribution.adgroup];
-    [self.testLibrary addInfoToSend:@"creative" value:attribution.creative];
-    [self.testLibrary addInfoToSend:@"click_label" value:attribution.clickLabel];
-    [self.testLibrary addInfoToSend:@"cost_type" value:attribution.costType];
-    [self.testLibrary addInfoToSend:@"cost_amount" value:[attribution.costAmount stringValue]];
-    [self.testLibrary addInfoToSend:@"cost_currency" value:attribution.costCurrency];
-
-    [self.testLibrary sendInfoToServer:self.extraPath];
-}
-
-@end
-
-@implementation ADJLastDeeplinkGetterSendAll
-
-- (void)didReadWithLastDeeplink:(nullable NSURL *)lastDeeplink { 
-    NSString *lastDeeplinkString = lastDeeplink == nil ? @"" : [lastDeeplink absoluteString];
-    [self.testLibrary addInfoToSend:@"last_deeplink" value:lastDeeplinkString];
-    [self.testLibrary sendInfoToServer:self.extraPath];
 }
 
 @end

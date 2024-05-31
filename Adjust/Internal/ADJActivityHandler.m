@@ -18,7 +18,7 @@
 #import "ADJUtil.h"
 #import "ADJAdjustFactory.h"
 #import "ADJAttributionHandler.h"
-#import "NSString+ADJAdditions.h"
+#import "ADJAdditions.h"
 #import "ADJSdkClickHandler.h"
 #import "ADJUserDefaults.h"
 #import "ADJUrlStrategy.h"
@@ -112,7 +112,7 @@ const BOOL kSkanRegisterLockWindow = NO;
 @property (nonatomic, copy) NSString* gdprPath;
 @property (nonatomic, copy) NSString* subscriptionPath;
 @property (nonatomic, copy) NSString* purchaseVerificationPath;
-@property (nonatomic, copy) AdjustResolvedDeeplinkBlock cachedDeeplinkResolutionCallback;
+@property (nonatomic, copy) ADJResolvedDeeplinkBlock cachedDeeplinkResolutionCallback;
 @property (nonatomic, copy) ADJAttribution *attribution;
 
 - (void)prepareDeeplinkI:(ADJActivityHandler *_Nullable)selfI
@@ -127,7 +127,7 @@ const BOOL kSkanRegisterLockWindow = NO;
 
 - (id)initWithConfig:(ADJConfig *_Nullable)adjustConfig
       savedPreLaunch:(ADJSavedPreLaunch * _Nullable)savedPreLaunch
-      deeplinkResolutionCallback:(AdjustResolvedDeeplinkBlock _Nullable)deepLinkResolutionCallback {
+      deeplinkResolutionCallback:(ADJResolvedDeeplinkBlock _Nullable)deepLinkResolutionCallback {
     self = [super init];
     if (self == nil) return nil;
 
@@ -142,10 +142,10 @@ const BOOL kSkanRegisterLockWindow = NO;
     }
     
     // check if ASA and IDFA tracking were switched off and warn just in case
-    if (adjustConfig.isIdfaReadingAllowed == NO) {
+    if (adjustConfig.isIdfaReadingEnabled == NO) {
         [ADJAdjustFactory.logger warn:@"IDFA reading has been switched off"];
     }
-    if (adjustConfig.allowAdServicesInfoReading == NO) {
+    if (adjustConfig.isAdServicesEnabled == NO) {
         [ADJAdjustFactory.logger warn:@"AdServices info reading has been switched off"];
     }
 
@@ -177,14 +177,14 @@ const BOOL kSkanRegisterLockWindow = NO;
     [self readActivityState];
     
     // register SKAdNetwork attribution if we haven't already
-    if (self.adjustConfig.isSkanAttributionHandlingEnabled) {
+    if (self.adjustConfig.isSkanAttributionEnabled) {
         NSNumber *numConversionValue = [NSNumber numberWithInteger:kSkanRegisterConversionValue];
         NSNumber *numLockWindow = [NSNumber numberWithBool:kSkanRegisterLockWindow];
 
         [[ADJSKAdNetwork getInstance] registerWithConversionValue:kSkanRegisterConversionValue
                                                       coarseValue:kSkanRegisterCoarseValue
                                                        lockWindow:numLockWindow
-                                                completionHandler:^(NSError * _Nonnull error) {
+                                            withCompletionHandler:^(NSError * _Nonnull error) {
             [self notifySkanCallbackWithConversionValue:numConversionValue
                                             coarseValue:kSkanRegisterCoarseValue
                                              lockWindow:numLockWindow
@@ -377,11 +377,11 @@ const BOOL kSkanRegisterLockWindow = NO;
                      }];
 }
 
-- (void)isEnabledWithCallback:(nonnull id<ADJIsEnabledCallback>)isEnabledCallback {
+- (void)isEnabledWithCompletionHandler:(nonnull ADJIsEnabledGetterBlock)completion {
     [ADJUtil launchInQueue:self.internalQueue
                 selfInject:self
                      block:^(ADJActivityHandler * selfI) {
-        [selfI isEnabledI:selfI withCallback:isEnabledCallback];
+        [selfI isEnabledI:selfI withCompletionHandler:completion];
     }];
 }
 
@@ -399,11 +399,11 @@ const BOOL kSkanRegisterLockWindow = NO;
 
 - (void)processAndResolveDeeplink:(NSURL * _Nullable)deeplink
                         clickTime:(NSDate * _Nullable)clickTime
-                completionHandler:(AdjustResolvedDeeplinkBlock _Nullable)completionHandler {
+            withCompletionHandler:(ADJResolvedDeeplinkBlock _Nullable)completion {
     [ADJUtil launchInQueue:self.internalQueue
                 selfInject:self
                      block:^(ADJActivityHandler * selfI) {
-        selfI.cachedDeeplinkResolutionCallback = completionHandler;
+        selfI.cachedDeeplinkResolutionCallback = completion;
         [selfI processDeeplinkI:selfI url:deeplink clickTime:clickTime];
     }];
 }
@@ -631,37 +631,33 @@ const BOOL kSkanRegisterLockWindow = NO;
     }];
 }
 
-- (void)verifyPurchase:(nonnull ADJPurchase *)purchase
-     completionHandler:(void (^_Nonnull)(ADJPurchaseVerificationResult * _Nonnull verificationResult))completionHandler {
+- (void)verifyAppStorePurchase:(nonnull ADJAppStorePurchase *)purchase
+         withCompletionHandler:(nonnull ADJVerificationResultBlock)completion {
     [ADJUtil launchInQueue:self.internalQueue
                 selfInject:self
                      block:^(ADJActivityHandler * selfI) {
-        [selfI verifyPurchaseI:selfI purchase:purchase completionHandler:completionHandler];
+        [selfI verifyAppStorePurchaseI:selfI purchase:purchase withCompletionHandler:completion];
     }];
 }
 
-- (void)attributionWithCallback:(nonnull id<ADJAttributionCallback>)attributionCallback {
+- (void)attributionWithCompletionHandler:(nonnull ADJAttributionGetterBlock)completion {
     __block ADJAttribution *_Nullable localAttribution = self.attribution;
 
     if (localAttribution == nil) {
         if (self.savedPreLaunch.cachedAttributionReadCallbacksArray == nil) {
             self.savedPreLaunch.cachedAttributionReadCallbacksArray = [NSMutableArray array];
         }
-
-        [self.savedPreLaunch.cachedAttributionReadCallbacksArray addObject:attributionCallback];
-
+        [self.savedPreLaunch.cachedAttributionReadCallbacksArray addObject:completion];
         return;
     }
 
-    __block id<ADJAttributionCallback>_Nonnull localAttributionCallback =
-        attributionCallback;
-
+    __block ADJAttributionGetterBlock localAttributionCallback = completion;
     [ADJUtil launchInMainThread:^{
-        [localAttributionCallback didReadWithAdjustAttribution:localAttribution];
+        localAttributionCallback(localAttribution);
     }];
 }
 
-- (void)adidWithCallback:(nonnull id<ADJAdidCallback>)adidCallback {
+- (void)adidWithCompletionHandler:(nonnull ADJAdidGetterBlock)completion {
     __block NSString *_Nullable localAdid = self.activityState == nil ? nil : self.activityState.adid;
 
     if (localAdid == nil) {
@@ -669,14 +665,13 @@ const BOOL kSkanRegisterLockWindow = NO;
             self.savedPreLaunch.cachedAdidReadCallbacksArray = [NSMutableArray array];
         }
 
-        [self.savedPreLaunch.cachedAdidReadCallbacksArray addObject:adidCallback];
+        [self.savedPreLaunch.cachedAdidReadCallbacksArray addObject:completion];
         return;
     }
 
-    __block id<ADJAdidCallback>_Nonnull localAdidCallback = adidCallback;
-
+    __block ADJAdidGetterBlock localAdidCallback = completion;
     [ADJUtil launchInMainThread:^{
-        [localAdidCallback didReadWithAdid:localAdid];
+        localAdidCallback(localAdid);
     }];
 }
 
@@ -689,12 +684,12 @@ const BOOL kSkanRegisterLockWindow = NO;
     }];
 }
 
-- (void)verifyAndTrack:(nonnull ADJEvent *)event
-     completionHandler:(void (^_Nonnull)(ADJPurchaseVerificationResult * _Nonnull verificationResult))completionHandler {
+- (void)verifyAndTrackAppStorePurchase:(nonnull ADJEvent *)event
+                 withCompletionHandler:(nonnull ADJVerificationResultBlock)completion {
     [ADJUtil launchInQueue:self.internalQueue
                 selfInject:self
                      block:^(ADJActivityHandler * selfI) {
-        [selfI verifyAndTrackI:selfI event:event completionHandler:completionHandler];
+        [selfI verifyAndTrackAppStorePurchaseI:selfI event:event withCompletionHandler:completion];
     }];
 }
 
@@ -856,7 +851,7 @@ preLaunchActions:(ADJSavedPreLaunch*)preLaunchActions
                                                      name:kForegroundTimerName
     ];
 
-    if (selfI.adjustConfig.sendInBackground) {
+    if (selfI.adjustConfig.isSendingInBackgroundEnabled) {
         [selfI.logger info:@"Send in background configured"];
         selfI.backgroundTimer = [ADJTimerOnce timerWithBlock:^{ [selfI backgroundTimerFired]; }
                                                       queue:selfI.internalQueue
@@ -1037,7 +1032,7 @@ preLaunchActions:(ADJSavedPreLaunch*)preLaunchActions
             selfI.activityState.updatePackagesAttData = [selfI.internalState itHasToUpdatePackagesAttData];
         }];
 
-        if (selfI.adjustConfig.allowAdServicesInfoReading == YES) {
+        if (selfI.adjustConfig.isAdServicesEnabled == YES) {
             [selfI checkForAdServicesAttributionI:selfI];
         }
 
@@ -1203,7 +1198,7 @@ preLaunchActions:(ADJSavedPreLaunch*)preLaunchActions
     [selfI.packageHandler sendFirstPackage];
 
     // if it is in the background and it can send, start the background timer
-    if (selfI.adjustConfig.sendInBackground && [selfI.internalState isInBackground]) {
+    if (selfI.adjustConfig.isSendingInBackgroundEnabled && [selfI.internalState isInBackground]) {
         [selfI startBackgroundTimerI:selfI];
     }
 
@@ -1333,10 +1328,10 @@ preLaunchActions:(ADJSavedPreLaunch*)preLaunchActions
     [selfI.packageHandler sendFirstPackage];
 }
 
-- (void)verifyPurchaseI:(ADJActivityHandler *)selfI
-               purchase:(nonnull ADJPurchase *)purchase
-      completionHandler:(void (^_Nonnull)(ADJPurchaseVerificationResult * _Nonnull verificationResult))completionHandler {
-    if ([ADJUtil isNull:completionHandler]) {
+- (void)verifyAppStorePurchaseI:(ADJActivityHandler *)selfI
+                       purchase:(nonnull ADJAppStorePurchase *)purchase
+          withCompletionHandler:(nonnull ADJVerificationResultBlock)completion {
+    if ([ADJUtil isNull:completion]) {
         [selfI.logger warn:@"Purchase verification aborted because completion handler is null"];
         return;
     }
@@ -1346,7 +1341,7 @@ preLaunchActions:(ADJSavedPreLaunch*)preLaunchActions
         verificationResult.verificationStatus = @"not_verified";
         verificationResult.code = 109;
         verificationResult.message = @"Purchase verification not available for data residency users right now";
-        completionHandler(verificationResult);
+        completion(verificationResult);
         return;
     }
     if (![selfI isEnabledI:selfI]) {
@@ -1359,7 +1354,7 @@ preLaunchActions:(ADJSavedPreLaunch*)preLaunchActions
         verificationResult.verificationStatus = @"not_verified";
         verificationResult.code = 101;
         verificationResult.message = @"Purchase verification aborted because purchase instance is null";
-        completionHandler(verificationResult);
+        completion(verificationResult);
         return;
     }
 
@@ -1379,7 +1374,7 @@ preLaunchActions:(ADJSavedPreLaunch*)preLaunchActions
 
     ADJActivityPackage *purchaseVerificationPackage = 
     [purchaseVerificationBuilder buildPurchaseVerificationPackageWithPurchase:purchase];
-    purchaseVerificationPackage.purchaseVerificationCallback = completionHandler;
+    purchaseVerificationPackage.purchaseVerificationCallback = completion;
     [selfI.purchaseVerificationHandler sendPurchaseVerificationPackage:purchaseVerificationPackage];
 }
 
@@ -1399,7 +1394,7 @@ preLaunchActions:(ADJSavedPreLaunch*)preLaunchActions
     // third party sharing is disabled when coppa is enabled and vice-versa
     BOOL tpsEnabled = ! isCoppaComplianceEnabled;
     ADJThirdPartySharing *adjustThirdPartySharing =
-        [[ADJThirdPartySharing alloc] initWithIsEnabledNumberBool:@(tpsEnabled)];
+        [[ADJThirdPartySharing alloc] initWithIsEnabled:@(tpsEnabled)];
 
     double now = [NSDate.date timeIntervalSince1970];
     ADJPackageBuilder *tpsBuilder = [[ADJPackageBuilder alloc]
@@ -1416,10 +1411,10 @@ preLaunchActions:(ADJSavedPreLaunch*)preLaunchActions
     [selfI.packageHandler sendFirstPackage];
 }
 
-- (void)verifyAndTrackI:(ADJActivityHandler *)selfI
-                  event:(nonnull ADJEvent *)event
-      completionHandler:(void (^_Nonnull)(ADJPurchaseVerificationResult * _Nonnull verificationResult))completionHandler {
-    if ([ADJUtil isNull:completionHandler]) {
+- (void)verifyAndTrackAppStorePurchaseI:(ADJActivityHandler *)selfI
+                                  event:(nonnull ADJEvent *)event
+                  withCompletionHandler:(nonnull ADJVerificationResultBlock)completion {
+    if ([ADJUtil isNull:completion]) {
         [selfI.logger warn:@"Purchase verification aborted because completion handler is null"];
         return;
     }
@@ -1429,7 +1424,7 @@ preLaunchActions:(ADJSavedPreLaunch*)preLaunchActions
         verificationResult.verificationStatus = @"not_verified";
         verificationResult.code = 109;
         verificationResult.message = @"Purchase verification not available for data residency users right now";
-        completionHandler(verificationResult);
+        completion(verificationResult);
         return;
     }
     if (![selfI isEnabledI:selfI]) {
@@ -1442,7 +1437,7 @@ preLaunchActions:(ADJSavedPreLaunch*)preLaunchActions
         verificationResult.verificationStatus = @"not_verified";
         verificationResult.code = 101;
         verificationResult.message = @"Purchase verification aborted because purchase instance is null";
-        completionHandler(verificationResult);
+        completion(verificationResult);
         return;
     }
 
@@ -1462,7 +1457,7 @@ preLaunchActions:(ADJSavedPreLaunch*)preLaunchActions
 
     ADJActivityPackage *purchaseVerificationPackage =
     [purchaseVerificationBuilder buildPurchaseVerificationPackageWithEvent:event];
-    purchaseVerificationPackage.purchaseVerificationCallback = completionHandler;
+    purchaseVerificationPackage.purchaseVerificationCallback = completion;
     [selfI.purchaseVerificationHandler sendPurchaseVerificationPackage:purchaseVerificationPackage];
     [selfI trackEvent:event];
 }
@@ -1556,10 +1551,12 @@ preLaunchActions:(ADJSavedPreLaunch*)preLaunchActions
     // check if we got resolved deep link in the response
     if (sdkClickResponseData.resolvedDeeplink != nil) {
         if (selfI.cachedDeeplinkResolutionCallback != nil) {
+            NSString *resolvedDeepLink = sdkClickResponseData.resolvedDeeplink;
+            ADJResolvedDeeplinkBlock callback = selfI.cachedDeeplinkResolutionCallback;
             [ADJUtil launchInMainThread:^{
-                selfI.cachedDeeplinkResolutionCallback(sdkClickResponseData.resolvedDeeplink);
-                selfI.cachedDeeplinkResolutionCallback = nil;
+                callback(resolvedDeepLink);
             }];
+            selfI.cachedDeeplinkResolutionCallback = nil;
         }
     }
 }
@@ -1610,8 +1607,9 @@ preLaunchActions:(ADJSavedPreLaunch*)preLaunchActions
     [ADJUtil launchInMainThread:^{
         BOOL toLaunchDeeplink = YES;
 
-        if ([selfI.adjustDelegate respondsToSelector:@selector(adjustDeeplinkResponse:)]) {
-            toLaunchDeeplink = [selfI.adjustDelegate adjustDeeplinkResponse:attributionResponseData.deeplink];
+        if ([selfI.adjustDelegate respondsToSelector:@selector(adjustDeferredDeeplinkReceived:)]) {
+            toLaunchDeeplink = [selfI.adjustDelegate
+                                adjustDeferredDeeplinkReceived:attributionResponseData.deeplink];
         }
 
         if (toLaunchDeeplink) {
@@ -1673,11 +1671,11 @@ preLaunchActions:(ADJSavedPreLaunch*)preLaunchActions
         return;
     }
 
-    for (id<ADJAttributionCallback> attributionCallback in
-         self.savedPreLaunch.cachedAttributionReadCallbacksArray)
-    {
+    for (ADJAttributionGetterBlock attributionCallback in
+         self.savedPreLaunch.cachedAttributionReadCallbacksArray) {
+        __block ADJAttributionGetterBlock localAttributionCallback = attributionCallback;
         [ADJUtil launchInMainThread:^{
-            [attributionCallback didReadWithAdjustAttribution:localAttribution];
+            localAttributionCallback(localAttribution);
         }];
     }
 
@@ -1693,9 +1691,10 @@ preLaunchActions:(ADJSavedPreLaunch*)preLaunchActions
         return;
     }
 
-    for (id<ADJAdidCallback> adidCallback in self.savedPreLaunch.cachedAdidReadCallbacksArray) {
+    for (ADJAdidGetterBlock adidCallback in self.savedPreLaunch.cachedAdidReadCallbacksArray) {
+        __block ADJAdidGetterBlock localAdidCallback = adidCallback;
         [ADJUtil launchInMainThread:^{
-            [adidCallback didReadWithAdid:localAdid];
+            localAdidCallback(localAdid);
         }];
     }
 
@@ -1772,7 +1771,7 @@ preLaunchActions:(ADJSavedPreLaunch*)preLaunchActions
         if (pushTokenString != nil && ![selfI.activityState.pushToken isEqualToString:pushTokenString]) {
             [self setPushTokenString:pushTokenString];
         }
-        if (selfI.adjustConfig.allowAdServicesInfoReading == YES) {
+        if (selfI.adjustConfig.isAdServicesEnabled == YES) {
             [selfI checkForAdServicesAttributionI:selfI];
         }
     }
@@ -1785,7 +1784,7 @@ preLaunchActions:(ADJSavedPreLaunch*)preLaunchActions
 }
 
 - (BOOL)shouldFetchAdServicesI:(ADJActivityHandler *)selfI {
-    if (selfI.adjustConfig.allowAdServicesInfoReading == NO) {
+    if (selfI.adjustConfig.isAdServicesEnabled == NO) {
         return NO;
     }
     
@@ -1839,10 +1838,10 @@ preLaunchActions:(ADJSavedPreLaunch*)preLaunchActions
        unPausingMessage:@"Resuming handlers to put SDK in online mode"];
 }
 
-- (void)isEnabledI:(ADJActivityHandler *)selfI
-      withCallback:(id<ADJIsEnabledCallback>)isEnabledCallback {
+- (void)isEnabledI:(ADJActivityHandler *)selfI withCompletionHandler:(ADJIsEnabledGetterBlock)completion {
+    __block ADJIsEnabledGetterBlock localIsEnabledCallback = completion;
     [ADJUtil launchInMainThread:^{
-        [isEnabledCallback didReadWithIsEnabled:[selfI isEnabledI:selfI]];
+        localIsEnabledCallback([selfI isEnabledI:selfI]);
     }];
 }
 
@@ -1950,12 +1949,14 @@ remainsPausedMessage:(NSString *)remainsPausedMessage
     NSString* key = [pairComponents objectAtIndex:0];
     if (![key hasPrefix:kAdjustPrefix]) return NO;
 
-    NSString* keyDecoded = [key adjUrlDecode];
+    // NSString* keyDecoded = [key adjUrlDecode];
+    NSString *keyDecoded = [ADJAdditions adjUrlDecode:key];
 
     NSString* value = [pairComponents objectAtIndex:1];
     if (value.length == 0) return NO;
 
-    NSString* valueDecoded = [value adjUrlDecode];
+    // NSString* valueDecoded = [value adjUrlDecode];
+    NSString *valueDecoded = [ADJAdditions adjUrlDecode:value];
     if (!valueDecoded) return NO;
 
     NSString* keyWOutPrefix = [keyDecoded substringFromIndex:kAdjustPrefix.length];
@@ -2418,7 +2419,7 @@ sdkClickHandlerOnly:(BOOL)sdkClickHandlerOnly
     }
 
     // has the option to send in the background -> is to send
-    if (selfI.adjustConfig.sendInBackground) {
+    if (selfI.adjustConfig.isSendingInBackgroundEnabled) {
         return YES;
     }
 
@@ -2775,7 +2776,7 @@ sdkClickHandlerOnly:(BOOL)sdkClickHandlerOnly
 }
 
 - (void)checkConversionValue:(ADJResponseData *)responseData {
-    if (!self.adjustConfig.isSkanAttributionHandlingEnabled) {
+    if (!self.adjustConfig.isSkanAttributionEnabled) {
         return;
     }
     if (responseData.jsonResponse == nil) {
@@ -2792,7 +2793,7 @@ sdkClickHandlerOnly:(BOOL)sdkClickHandlerOnly
     [[ADJSKAdNetwork getInstance] updateConversionValue:[conversionValue intValue]
                                             coarseValue:coarseValue
                                              lockWindow:lockWindow
-                                      completionHandler:^(NSError *error) {
+                                  withCompletionHandler:^(NSError *error) {
         [self notifySkanCallbackWithConversionValue:conversionValue
                                         coarseValue:coarseValue
                                          lockWindow:lockWindow
